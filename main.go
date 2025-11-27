@@ -21,7 +21,7 @@ type dashlight struct {
 
 var args struct {
 	ObdMode   bool `arg:"-d,--obd,help:On-Board Diagnostics: display diagnostic info if provided."`
-	ListMode  bool `arg:"-l,--list,help:List supported color attributes."`
+	ListMode  bool `arg:"-l,--list,help:List supported color attributes and emoji aliases."`
 	ClearMode bool `arg:"-c,--clear,help:Shell code to clear set dashlights."`
 }
 
@@ -59,6 +59,8 @@ func parseEnviron(environ []string, lights *[]dashlight) {
 func display(w io.Writer, lights *[]dashlight) {
 	if args.ListMode {
 		displayColorList(w)
+		flexPrintln(w, "")
+		displayEmojiList(w)
 		return
 	}
 	if args.ClearMode {
@@ -105,6 +107,8 @@ func parseDashlightFromEnv(lights *[]dashlight, env string) {
 		// begin shifting elements off elements slice, ignore leading DASHLIGHT_ prefix
 		name, elements := elements[1], elements[2:]
 		hexstr, elements := elements[0], elements[1:]
+		// Resolve emoji alias to hex code if applicable
+		hexstr = resolveEmojiAlias(hexstr)
 		glyph, err := utf8HexToString(string(hexstr))
 		if err != nil {
 			return

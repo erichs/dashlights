@@ -190,3 +190,76 @@ func TestParseEnviron(t *testing.T) {
 		t.Error("Failed to parse from environ key=val strings.")
 	}
 }
+
+func TestEmojiAliasInParsing(t *testing.T) {
+	lights := make([]dashlight, 0)
+
+	// Test emoji alias without color modifiers
+	parseDashlightFromEnv(&lights, "DASHLIGHT_FIX_WRENCH=Tool needed")
+	if len(lights) != 1 {
+		t.Fatalf("Expected 1 light, got %d", len(lights))
+	}
+	if lights[0].Name != "FIX" {
+		t.Errorf("Expected Name 'FIX', got '%s'", lights[0].Name)
+	}
+	if lights[0].Glyph != "🔧" {
+		t.Errorf("Expected Glyph '🔧', got '%s'", lights[0].Glyph)
+	}
+	if lights[0].Diagnostic != "Tool needed" {
+		t.Errorf("Expected Diagnostic 'Tool needed', got '%s'", lights[0].Diagnostic)
+	}
+
+	// Test emoji alias with color modifiers
+	lights = make([]dashlight, 0)
+	parseDashlightFromEnv(&lights, "DASHLIGHT_ATTACH_PAPERCLIP_BGBLUE=File attached")
+	if len(lights) != 1 {
+		t.Fatalf("Expected 1 light, got %d", len(lights))
+	}
+	if lights[0].Name != "ATTACH" {
+		t.Errorf("Expected Name 'ATTACH', got '%s'", lights[0].Name)
+	}
+	if lights[0].Glyph != "📎" {
+		t.Errorf("Expected Glyph '📎', got '%s'", lights[0].Glyph)
+	}
+
+	// Test multiple emoji aliases
+	lights = make([]dashlight, 0)
+	parseDashlightFromEnv(&lights, "DASHLIGHT_SUCCESS_CHECKMARK_FGGREEN=All good")
+	parseDashlightFromEnv(&lights, "DASHLIGHT_ERROR_CROSSMARK_FGRED=Failed")
+	parseDashlightFromEnv(&lights, "DASHLIGHT_INFO_LIGHTBULB=Tip")
+	if len(lights) != 3 {
+		t.Fatalf("Expected 3 lights, got %d", len(lights))
+	}
+	if lights[0].Glyph != "✅" {
+		t.Errorf("Expected first glyph '✅', got '%s'", lights[0].Glyph)
+	}
+	if lights[1].Glyph != "❌" {
+		t.Errorf("Expected second glyph '❌', got '%s'", lights[1].Glyph)
+	}
+	if lights[2].Glyph != "💡" {
+		t.Errorf("Expected third glyph '💡', got '%s'", lights[2].Glyph)
+	}
+
+	// Test that hex codes still work
+	lights = make([]dashlight, 0)
+	parseDashlightFromEnv(&lights, "DASHLIGHT_LEGACY_1F527=Old style")
+	if len(lights) != 1 {
+		t.Fatalf("Expected 1 light, got %d", len(lights))
+	}
+	if lights[0].Glyph != "🔧" {
+		t.Errorf("Expected Glyph '🔧' from hex code, got '%s'", lights[0].Glyph)
+	}
+
+	// Test emoji alias with empty name (double underscore)
+	lights = make([]dashlight, 0)
+	parseDashlightFromEnv(&lights, "DASHLIGHT__LINK_FGCYAN=Connected")
+	if len(lights) != 1 {
+		t.Fatalf("Expected 1 light, got %d", len(lights))
+	}
+	if lights[0].Name != "" {
+		t.Errorf("Expected empty Name, got '%s'", lights[0].Name)
+	}
+	if lights[0].Glyph != "🔗" {
+		t.Errorf("Expected Glyph '🔗', got '%s'", lights[0].Glyph)
+	}
+}
