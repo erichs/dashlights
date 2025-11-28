@@ -16,6 +16,7 @@ func GetAllSignals() []Signal {
 		NewProdPanicSignal(),       // 4ms - File reads (kubectl/aws config)
 		NewProxyActiveSignal(),     // <1ms - Env var check
 		NewPermissiveUmaskSignal(), // <1ms - Single syscall
+		NewDockerSocketSignal(),    // 5ms - File stat
 
 		// Repository hygiene signals
 		NewEnvNotIgnoredSignal(),       // 4ms - Reads .gitignore
@@ -27,7 +28,7 @@ func GetAllSignals() []Signal {
 		NewDiskSpaceSignal(),        // 4ms - Syscall
 		NewRebootPendingSignal(),    // 5ms - File stat
 		NewZombieProcessesSignal(),  // 5ms - /proc scan
-		NewDockerSocketSignal(),     // 5ms - File stat
 		NewDanglingSymlinksSignal(), // <1ms - Directory scan
+		NewTimeDriftSignal(),        // <1ms - File create/stat/delete
 	}
 }
