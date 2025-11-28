@@ -17,6 +17,7 @@ func GetAllSignals() []Signal {
 		NewProxyActiveSignal(),     // <1ms - Env var check
 		NewPermissiveUmaskSignal(), // <1ms - Single syscall
 		NewDockerSocketSignal(),    // 5ms - File stat
+		NewDebugEnabledSignal(),    // <1ms - Env var check
 
 		// Repository hygiene signals
 		NewEnvNotIgnoredSignal(),       // 4ms - Reads .gitignore
