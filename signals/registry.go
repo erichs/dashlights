@@ -11,13 +11,15 @@ func GetAllSignals() []Signal {
 		NewAWSAliasHijackSignal(),   // <1ms - File read and parse
 
 		// OpSec signals
-		NewLDPreloadSignal(),       // <1ms - Env var check
-		NewHistoryDisabledSignal(), // <1ms - Env var check
-		NewProdPanicSignal(),       // 4ms - File reads (kubectl/aws config)
-		NewProxyActiveSignal(),     // <1ms - Env var check
-		NewPermissiveUmaskSignal(), // <1ms - Single syscall
-		NewDockerSocketSignal(),    // 5ms - File stat
-		NewDebugEnabledSignal(),    // <1ms - Env var check
+		NewLDPreloadSignal(),          // <1ms - Env var check
+		NewHistoryDisabledSignal(),    // <1ms - Env var check
+		NewProdPanicSignal(),          // 4ms - File reads (kubectl/aws config)
+		NewProxyActiveSignal(),        // <1ms - Env var check
+		NewPermissiveUmaskSignal(),    // <1ms - Single syscall
+		NewDockerSocketSignal(),       // 5ms - File stat
+		NewDebugEnabledSignal(),       // <1ms - Env var check
+		NewHistoryPermissionsSignal(), // <1ms - File stat checks
+		NewSSHAgentBloatSignal(),      // <1ms - Unix socket query
 
 		// Repository hygiene signals
 		NewEnvNotIgnoredSignal(),       // 4ms - Reads .gitignore
