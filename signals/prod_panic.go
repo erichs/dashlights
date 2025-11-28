@@ -91,7 +91,7 @@ func isProdIndicator(value string) bool {
 	}
 
 	lower := strings.ToLower(value)
-	prodIndicators := []string{"prod", "production", "live", "mainnet", "prd"}
+	prodIndicators := []string{"prod", "production", "live", "prd"}
 
 	for _, indicator := range prodIndicators {
 		if strings.Contains(lower, indicator) {

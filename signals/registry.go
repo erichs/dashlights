@@ -7,9 +7,8 @@ func GetAllSignals() []Signal {
 		// IAM signals (1-5)
 		NewSSHKeysSignal(), // 6ms - File stat checks
 		// NewSudoCachedSignal(),      // DISABLED: 12ms - Runs sudo command
-		NewSSHAgentForwardingSignal(), // <1ms - Env var check
-		NewNakedCredentialsSignal(),   // <1ms - Env var scan
-		NewPrivilegedPathSignal(),     // <1ms - PATH parsing
+		NewNakedCredentialsSignal(), // <1ms - Env var scan
+		NewPrivilegedPathSignal(),   // <1ms - PATH parsing
 
 		// OpSec signals (6-10)
 		NewLDPreloadSignal(),       // <1ms - Env var check
@@ -30,6 +29,5 @@ func GetAllSignals() []Signal {
 		NewRebootPendingSignal(),   // 5ms - File stat
 		NewZombieProcessesSignal(), // 5ms - /proc scan
 		NewDockerSocketSignal(),    // 5ms - File stat
-		// NewTimeDriftSignal(),    // DISABLED: 21ms - Network call to NTP
 	}
 }

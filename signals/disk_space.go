@@ -44,8 +44,6 @@ func (s *DiskSpaceSignal) Check(ctx context.Context) bool {
 		return true
 	}
 
-	// Check home volume (might be different from root)
-	// This is a simplified check - could be enhanced
 	return false
 }
 

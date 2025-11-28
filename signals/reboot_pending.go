@@ -37,19 +37,7 @@ func (s *RebootPendingSignal) Check(ctx context.Context) bool {
 		}
 	}
 
-	if runtime.GOOS == "darwin" {
-		// TODO: Check for macOS updates
-		// check output of defaults read /Library/Preferences/com.apple.SoftwareUpdate.plist RecommendedUpdates
-		// for lines containing 'DisplayName' and 'Security'
-		if _, err := os.Stat("/Library/Preferences/com.apple.SoftwareUpdate.plist"); err == nil {
-
-			return true
-		}
-
-	}
-
-	// macOS doesn't have a simple file-based indicator
-	// Could check for pending updates via softwareupdate, but that's slow
+	// TODO (macOS): Check for pending macOS updates that require reboot
 
 	return false
 }

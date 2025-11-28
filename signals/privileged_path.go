@@ -3,6 +3,7 @@ package signals
 import (
 	"context"
 	"os"
+	"runtime"
 	"strings"
 )
 
@@ -32,27 +33,31 @@ func (s *PrivilegedPathSignal) Remediation() string {
 }
 
 func (s *PrivilegedPathSignal) Check(ctx context.Context) bool {
+	if runtime.GOOS == "windows" {
+		return false
+	}
+
 	pathEnv := os.Getenv("PATH")
 	if pathEnv == "" {
 		return false
 	}
-	
+
 	pathSep := ":"
 	paths := strings.Split(pathEnv, pathSep)
-	
+
 	for i, p := range paths {
 		// Check for explicit '.' or empty string (which means current directory)
 		if p == "." {
 			s.diagnostic = "Current directory '.' found in PATH"
 			return true
 		}
-		
+
 		// Check for empty string between colons (::)
 		if p == "" {
 			s.diagnostic = "Empty path entry (::) found in PATH (implies current directory)"
 			return true
 		}
-		
+
 		// Extra dangerous: '.' before system directories
 		if p == "." && i < len(paths)-1 {
 			// Check if any subsequent path is a system directory
@@ -64,7 +69,7 @@ func (s *PrivilegedPathSignal) Check(ctx context.Context) bool {
 			}
 		}
 	}
-	
+
 	return false
 }
 
@@ -77,7 +82,7 @@ func isSystemPath(path string) bool {
 		"/usr/local/bin",
 		"/usr/local/sbin",
 	}
-	
+
 	for _, sp := range systemPaths {
 		if path == sp {
 			return true
@@ -85,4 +90,3 @@ func isSystemPath(path string) bool {
 	}
 	return false
 }
-

@@ -52,7 +52,7 @@ func main() {
 	arg.MustParse(&args)
 
 	// Run security signal checks with a tight timeout for performance
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()
 
 	allSignals := signals.GetAllSignals()
