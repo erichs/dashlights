@@ -9,6 +9,7 @@ func GetAllSignals() []Signal {
 		// NewSudoCachedSignal(),      // DISABLED: 12ms - Runs sudo command
 		NewNakedCredentialsSignal(), // <1ms - Env var scan
 		NewPrivilegedPathSignal(),   // <1ms - PATH parsing
+		NewAWSAliasHijackSignal(),   // <1ms - File read and parse
 
 		// OpSec signals (6-10)
 		NewLDPreloadSignal(),       // <1ms - Env var check
@@ -19,7 +20,6 @@ func GetAllSignals() []Signal {
 
 		// Repository hygiene signals (11-15)
 		NewEnvNotIgnoredSignal(),       // 4ms - Reads .gitignore
-		NewGitEmailMismatchSignal(),    // 9ms - Git commands
 		NewRootOwnedHomeSignal(),       // 5ms - File stat checks
 		NewWorldWritableConfigSignal(), // 5ms - File stat checks
 		NewUntrackedCryptoKeysSignal(), // 5ms - Directory scan
