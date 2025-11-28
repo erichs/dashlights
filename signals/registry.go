@@ -20,6 +20,7 @@ func GetAllSignals() []Signal {
 		NewDebugEnabledSignal(),       // <1ms - Env var check
 		NewHistoryPermissionsSignal(), // <1ms - File stat checks
 		NewSSHAgentBloatSignal(),      // <1ms - Unix socket query
+		NewSSHKeysSignal(),            // 5ms - File stat checks
 
 		// Repository hygiene signals
 		NewEnvNotIgnoredSignal(),       // 4ms - Reads .gitignore
