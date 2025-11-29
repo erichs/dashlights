@@ -22,11 +22,37 @@ type procFS interface {
 type realProcFS struct{}
 
 func (r *realProcFS) ReadFile(name string) ([]byte, error) {
-	return os.ReadFile(name) // #nosec G304 -- paths are validated by caller (checkWithFS)
+	// Validate path to prevent directory traversal
+	if strings.Contains(name, "..") {
+		return nil, os.ErrInvalid
+	}
+
+	// Clean the path
+	cleanPath := filepath.Clean(name)
+
+	// Ensure the cleaned path doesn't contain directory traversal
+	if strings.Contains(cleanPath, "..") {
+		return nil, os.ErrInvalid
+	}
+
+	return os.ReadFile(cleanPath)
 }
 
 func (r *realProcFS) ReadDir(name string) ([]fs.DirEntry, error) {
-	return os.ReadDir(name)
+	// Validate path to prevent directory traversal
+	if strings.Contains(name, "..") {
+		return nil, os.ErrInvalid
+	}
+
+	// Clean the path
+	cleanPath := filepath.Clean(name)
+
+	// Ensure the cleaned path doesn't contain directory traversal
+	if strings.Contains(cleanPath, "..") {
+		return nil, os.ErrInvalid
+	}
+
+	return os.ReadDir(cleanPath)
 }
 
 // ZombieProcessesSignal checks for excessive zombie processes
@@ -103,9 +129,26 @@ func (s *ZombieProcessesSignal) checkWithFS(fs procFS) bool {
 			continue
 		}
 
+		// Additional validation: ensure name doesn't contain directory traversal
+		if strings.Contains(name, "..") || strings.Contains(name, "/") {
+			continue
+		}
+
+		// Clean the name
+		name = filepath.Clean(name)
+
+		// Validate again after cleaning
+		if strings.Contains(name, "..") || strings.Contains(name, "/") {
+			continue
+		}
+
 		// Safely construct path to /proc/PID/stat
 		statPath := filepath.Join("/proc", name, "stat")
-		statData, err := fs.ReadFile(statPath) // #nosec G304 -- path is sanitized: name is validated to be numeric PID
+
+		// Clean the final path
+		statPath = filepath.Clean(statPath)
+
+		statData, err := fs.ReadFile(statPath)
 		if err != nil {
 			continue
 		}

@@ -242,6 +242,12 @@ func TestRealProcFS_ReadFile(t *testing.T) {
 	if err == nil {
 		t.Error("Expected error reading non-existent file")
 	}
+
+	// Test directory traversal prevention
+	_, err = fs.ReadFile("/tmp/../etc/passwd")
+	if err == nil {
+		t.Error("Expected error for path with directory traversal")
+	}
 }
 
 func TestRealProcFS_ReadDir(t *testing.T) {
@@ -272,6 +278,12 @@ func TestRealProcFS_ReadDir(t *testing.T) {
 	_, err = fs.ReadDir("/nonexistent/directory/path")
 	if err == nil {
 		t.Error("Expected error reading non-existent directory")
+	}
+
+	// Test directory traversal prevention
+	_, err = fs.ReadDir("/tmp/../etc")
+	if err == nil {
+		t.Error("Expected error for path with directory traversal")
 	}
 }
 

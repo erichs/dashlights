@@ -3,7 +3,6 @@ package signals
 import (
 	"context"
 	"fmt"
-	"math"
 	"runtime"
 	"syscall"
 )
@@ -68,14 +67,16 @@ func (s *DiskSpaceSignal) checkPath(path string) bool {
 	percentUsed64 := (used * 100) / total
 
 	// Validate the value is within int range before conversion (G115)
-	if percentUsed64 > uint64(math.MaxInt) {
-		// This should never happen for a percentage, but handle it safely anyway
+	// For a percentage, this should always be 0-100, but we validate to be safe
+	if percentUsed64 > 100 {
+		// Cap at 100% if somehow we get a value over 100
 		s.path = path
 		s.percentUsed = 100
 		return true
 	}
 
-	percentUsed := int(percentUsed64) // #nosec G115 -- percentUsed64 is validated to be <= math.MaxInt
+	// Safe conversion: percentUsed64 is guaranteed to be 0-100
+	percentUsed := int(percentUsed64)
 
 	if percentUsed > 90 {
 		s.path = path
