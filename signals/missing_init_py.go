@@ -45,9 +45,17 @@ func (s *MissingInitPySignal) Check(ctx context.Context) bool {
 			return nil // Skip errors
 		}
 
-		// Skip hidden directories and common non-package directories
+		// Only process directories
 		if info.IsDir() {
+			// Don't check the root directory itself, but continue walking
+			// IMPORTANT: Check this BEFORE checking name, because "." starts with "."!
+			if path == "." {
+				return nil
+			}
+
 			name := info.Name()
+
+			// Skip hidden directories and common non-package directories
 			if strings.HasPrefix(name, ".") ||
 				name == "__pycache__" ||
 				name == "venv" ||
@@ -56,11 +64,6 @@ func (s *MissingInitPySignal) Check(ctx context.Context) bool {
 				name == "dist" ||
 				name == "build" {
 				return filepath.SkipDir
-			}
-
-			// Skip the root directory itself
-			if path == "." {
-				return nil
 			}
 
 			// Check if this directory looks like a Python package

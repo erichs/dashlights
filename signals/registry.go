@@ -31,7 +31,7 @@ func GetAllSignals() []Signal {
 		NewPyCachePollutionSignal(),    // Directory walk (performance)
 		NewNpmrcTokensSignal(),         // File read
 		NewCargoPathDepsSignal(),       // File read
-		NewMissingInitPySignal(),       // Test failures - needs investigation
+		NewMissingInitPySignal(),       // Directory walk - checks for missing __init__.py
 		NewSnapshotDependencySignal(),  // Optimized .git file reads (was 4.5ms with shell, now ~34μs)
 
 		// System health signals
