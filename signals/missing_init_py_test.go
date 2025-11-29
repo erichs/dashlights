@@ -3,6 +3,7 @@ package signals
 import (
 	"context"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -42,6 +43,49 @@ func TestMissingInitPySignal_WithInitPy(t *testing.T) {
 	result := signal.Check(ctx)
 	if result {
 		t.Error("Expected false when __init__.py exists")
+	}
+}
+
+func TestMissingInitPySignal_Diagnostic_NoFoundDirs(t *testing.T) {
+	tmpDir := t.TempDir()
+	originalDir, _ := os.Getwd()
+	os.Chdir(tmpDir)
+	defer os.Chdir(originalDir)
+
+	signal := NewMissingInitPySignal()
+	ctx := context.Background()
+
+	// Check with no Python files - should not trigger
+	signal.Check(ctx)
+
+	// Diagnostic should still work even when not triggered
+	diagnostic := signal.Diagnostic()
+	if diagnostic == "" {
+		t.Error("Expected Diagnostic() to return a non-empty string")
+	}
+}
+
+func TestMissingInitPySignal_Diagnostic_WithFoundDirs(t *testing.T) {
+	tmpDir := t.TempDir()
+	originalDir, _ := os.Getwd()
+	os.Chdir(tmpDir)
+	defer os.Chdir(originalDir)
+
+	// Create a package missing __init__.py
+	os.Mkdir("mypackage", 0755)
+	os.WriteFile("mypackage/module.py", []byte("def foo(): pass"), 0644)
+
+	signal := NewMissingInitPySignal()
+	ctx := context.Background()
+
+	if !signal.Check(ctx) {
+		t.Error("Expected true when __init__.py is missing")
+	}
+
+	// Diagnostic should contain the directory name
+	diagnostic := signal.Diagnostic()
+	if !strings.Contains(diagnostic, "mypackage") {
+		t.Errorf("Expected diagnostic to contain 'mypackage', got '%s'", diagnostic)
 	}
 }
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"os/exec"
+	"strings"
 	"testing"
 )
 
@@ -62,6 +63,12 @@ func TestPyCachePollutionSignal_WithPyCache(t *testing.T) {
 	result := signal.Check(ctx)
 	if !result {
 		t.Error("Expected true when __pycache__ with .pyc files exists")
+	}
+
+	// Verify diagnostic is populated
+	diagnostic := signal.Diagnostic()
+	if !strings.Contains(diagnostic, "__pycache__") {
+		t.Errorf("Expected diagnostic to contain '__pycache__', got '%s'", diagnostic)
 	}
 }
 

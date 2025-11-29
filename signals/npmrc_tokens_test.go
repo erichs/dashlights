@@ -6,6 +6,36 @@ import (
 	"testing"
 )
 
+func TestNpmrcTokensSignal_Name(t *testing.T) {
+	signal := NewNpmrcTokensSignal()
+	if signal.Name() != "NPM RC Tokens" {
+		t.Errorf("Expected 'NPM RC Tokens', got '%s'", signal.Name())
+	}
+}
+
+func TestNpmrcTokensSignal_Emoji(t *testing.T) {
+	signal := NewNpmrcTokensSignal()
+	if signal.Emoji() != "📦" {
+		t.Errorf("Expected '📦', got '%s'", signal.Emoji())
+	}
+}
+
+func TestNpmrcTokensSignal_Diagnostic(t *testing.T) {
+	signal := NewNpmrcTokensSignal()
+	expected := ".npmrc contains auth tokens (should be in ~/.npmrc, not project root)"
+	if signal.Diagnostic() != expected {
+		t.Errorf("Expected '%s', got '%s'", expected, signal.Diagnostic())
+	}
+}
+
+func TestNpmrcTokensSignal_Remediation(t *testing.T) {
+	signal := NewNpmrcTokensSignal()
+	expected := "Move .npmrc to ~/.npmrc and add .npmrc to .gitignore"
+	if signal.Remediation() != expected {
+		t.Errorf("Expected '%s', got '%s'", expected, signal.Remediation())
+	}
+}
+
 func TestNpmrcTokensSignal_NoNpmrc(t *testing.T) {
 	tmpDir := t.TempDir()
 	originalDir, _ := os.Getwd()

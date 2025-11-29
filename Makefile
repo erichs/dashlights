@@ -1,4 +1,4 @@
-.PHONY: all help build test test-integration fmt fmt-check clean install hooks
+.PHONY: all help build test test-integration fmt fmt-check clean install hooks coverage coverage-html coverage-signals
 
 # Default target - format, build, and test
 all: fmt build test test-integration test-race
@@ -11,6 +11,10 @@ help:
 	@echo "  make build             - Build the dashlights binary"
 	@echo "  make test              - Run all tests"
 	@echo "  make test-integration  - Run integration tests (including performance)"
+	@echo "  make test-race         - Run tests with race detector"
+	@echo "  make coverage          - Run tests with coverage report"
+	@echo "  make coverage-html     - Generate HTML coverage report"
+	@echo "  make coverage-signals  - Show detailed coverage for signals package"
 	@echo "  make fmt               - Format all Go files"
 	@echo "  make fmt-check         - Check if files need formatting (CI-friendly)"
 	@echo "  make clean             - Remove built binaries"
@@ -35,6 +39,36 @@ test-race:
 	@echo "Running concurrency race tests..."
 	@go test -race ./...
 
+# Generate coverage report
+coverage:
+	@echo "Running tests with coverage..."
+	@go test -coverprofile=coverage.out ./...
+	@go tool cover -func=coverage.out
+	@echo ""
+	@echo "Coverage summary:"
+	@go tool cover -func=coverage.out | grep total | awk '{print "Total: " $$3}'
+	@echo ""
+	@echo "Signals package coverage:"
+	@go tool cover -func=coverage.out | grep signals/ | tail -1 | awk '{print $$1 ": " $$3}'
+
+# Generate HTML coverage report
+coverage-html: coverage
+	@echo "Generating HTML coverage report..."
+	@go tool cover -html=coverage.out -o coverage.html
+	@echo "✅ Coverage report generated: coverage.html"
+	@echo "Open coverage.html in your browser to view detailed coverage"
+
+# Show detailed coverage for signals package
+coverage-signals:
+	@echo "Running tests with coverage for signals package..."
+	@go test -coverprofile=coverage.out ./signals/
+	@echo ""
+	@echo "Signals package coverage:"
+	@go tool cover -func=coverage.out | grep "signals/" | awk '{printf "%-60s %s\n", $$1 ":" $$2, $$3}'
+	@echo ""
+	@echo "Summary:"
+	@go tool cover -func=coverage.out | grep total | awk '{print "Total coverage: " $$3}'
+
 # Format all Go files
 fmt:
 	@echo "Formatting Go files..."
@@ -50,7 +84,7 @@ fmt-check:
 # Clean built binaries
 clean:
 	@echo "Cleaning..."
-	@rm -f dashlights
+	@rm -f dashlights coverage.out coverage.html
 	@echo "✅ Clean complete"
 
 # Install to GOPATH/bin

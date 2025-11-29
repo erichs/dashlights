@@ -6,6 +6,36 @@ import (
 	"testing"
 )
 
+func TestDebugEnabledSignal_Name(t *testing.T) {
+	signal := NewDebugEnabledSignal()
+	if signal.Name() != "Debug Mode Enabled" {
+		t.Errorf("Expected 'Debug Mode Enabled', got '%s'", signal.Name())
+	}
+}
+
+func TestDebugEnabledSignal_Emoji(t *testing.T) {
+	signal := NewDebugEnabledSignal()
+	if signal.Emoji() != "🐛" {
+		t.Errorf("Expected '🐛', got '%s'", signal.Emoji())
+	}
+}
+
+func TestDebugEnabledSignal_Diagnostic(t *testing.T) {
+	signal := NewDebugEnabledSignal()
+	expected := "Debug/trace/verbose environment variables are set (can spam logs and leak data)"
+	if signal.Diagnostic() != expected {
+		t.Errorf("Expected '%s', got '%s'", expected, signal.Diagnostic())
+	}
+}
+
+func TestDebugEnabledSignal_Remediation(t *testing.T) {
+	signal := NewDebugEnabledSignal()
+	expected := "Unset DEBUG, TRACE, and VERBOSE environment variables in production"
+	if signal.Remediation() != expected {
+		t.Errorf("Expected '%s', got '%s'", expected, signal.Remediation())
+	}
+}
+
 func TestDebugEnabledSignal_NoDebugVars(t *testing.T) {
 	// Ensure no debug vars are set
 	os.Unsetenv("DEBUG")

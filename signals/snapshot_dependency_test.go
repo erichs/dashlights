@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"os/exec"
+	"strings"
 	"testing"
 )
 
@@ -92,6 +93,12 @@ func TestSnapshotDependencySignal_MainBranchWithSnapshot(t *testing.T) {
 	result := signal.Check(ctx)
 	if !result {
 		t.Error("Expected true when SNAPSHOT found on main branch")
+	}
+
+	// Verify diagnostic is populated
+	diagnostic := signal.Diagnostic()
+	if !strings.Contains(diagnostic, "SNAPSHOT") {
+		t.Errorf("Expected diagnostic to contain 'SNAPSHOT', got '%s'", diagnostic)
 	}
 }
 

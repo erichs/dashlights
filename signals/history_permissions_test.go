@@ -7,6 +7,36 @@ import (
 	"testing"
 )
 
+func TestHistoryPermissionsSignal_Name(t *testing.T) {
+	signal := NewHistoryPermissionsSignal()
+	if signal.Name() != "Shell History World-Readable" {
+		t.Errorf("Expected 'Shell History World-Readable', got '%s'", signal.Name())
+	}
+}
+
+func TestHistoryPermissionsSignal_Emoji(t *testing.T) {
+	signal := NewHistoryPermissionsSignal()
+	if signal.Emoji() != "📜" {
+		t.Errorf("Expected '📜', got '%s'", signal.Emoji())
+	}
+}
+
+func TestHistoryPermissionsSignal_Diagnostic(t *testing.T) {
+	signal := NewHistoryPermissionsSignal()
+	expected := "Shell history files are world-readable (other users can read your typed secrets)"
+	if signal.Diagnostic() != expected {
+		t.Errorf("Expected '%s', got '%s'", expected, signal.Diagnostic())
+	}
+}
+
+func TestHistoryPermissionsSignal_Remediation(t *testing.T) {
+	signal := NewHistoryPermissionsSignal()
+	expected := "Run: chmod 600 ~/.bash_history ~/.zsh_history"
+	if signal.Remediation() != expected {
+		t.Errorf("Expected '%s', got '%s'", expected, signal.Remediation())
+	}
+}
+
 func TestHistoryPermissionsSignal_NoHistoryFiles(t *testing.T) {
 	// Create a temporary directory with no history files
 	tmpDir := t.TempDir()
