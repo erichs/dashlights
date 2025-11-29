@@ -1,17 +1,24 @@
-.PHONY: all help build test test-integration fmt fmt-check clean install hooks coverage coverage-html coverage-signals
+.PHONY: all help build test test-integration fmt fmt-check clean install hooks coverage coverage-html coverage-signals gosec
 
-# Default target - format, build, and test
-all: fmt build test test-integration test-race
+# Detect Go bin directory portably
+GOBIN := $(shell go env GOBIN)
+ifeq ($(GOBIN),)
+    GOBIN := $(shell go env GOPATH)/bin
+endif
+
+# Default target - format, build, test, and security scan
+all: fmt build test test-integration test-race gosec
 	@echo "✅ All checks passed!"
 
 help:
 	@echo "Available targets:"
-	@echo "  make                   - Format, build, and test (default)"
+	@echo "  make                   - Format, build, test, and security scan (default)"
 	@echo "  make all               - Same as default"
 	@echo "  make build             - Build the dashlights binary"
 	@echo "  make test              - Run all tests"
 	@echo "  make test-integration  - Run integration tests (including performance)"
 	@echo "  make test-race         - Run tests with race detector"
+	@echo "  make gosec             - Run security scanner (gosec) with audit mode"
 	@echo "  make coverage          - Run tests with coverage report"
 	@echo "  make coverage-html     - Generate HTML coverage report"
 	@echo "  make coverage-signals  - Show detailed coverage for signals package"
@@ -38,6 +45,16 @@ test-integration:
 test-race:
 	@echo "Running concurrency race tests..."
 	@go test -race ./...
+
+# Run security scanner with audit mode
+gosec:
+	@echo "Running security scanner (gosec)..."
+	@if [ ! -f $(GOBIN)/gosec ]; then \
+		echo "gosec not found. Installing..."; \
+		go install github.com/securego/gosec/v2/cmd/gosec@latest; \
+	fi
+	@$(GOBIN)/gosec -conf gosec-config.json ./...
+	@echo "✅ Security scan passed - no issues found!"
 
 # Generate coverage report
 coverage:

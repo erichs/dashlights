@@ -1,0 +1,58 @@
+name: Security Scan
+
+# Run on pushes to main/master, pull requests, and weekly schedule
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  schedule:
+    # Run every Sunday at 00:00 UTC
+    - cron: '0 0 * * 0'
+
+jobs:
+  gosec:
+    name: Gosec Security Scanner
+    runs-on: ubuntu-latest
+    permissions:
+      # Required for uploading SARIF results to GitHub Security
+      security-events: write
+      # Required for actions/checkout
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Run Gosec Security Scanner
+        uses: securego/gosec@master
+        with:
+          # Use our custom gosec-config.json with audit mode enabled and nosec disabled
+          args: '-conf gosec-config.json -fmt sarif -out results.sarif ./...'
+
+      - name: Upload SARIF file
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          # Path to SARIF file relative to the root of the repository
+          sarif_file: results.sarif
+        # Upload even if gosec finds issues (so they appear in Security tab)
+        if: always()
+
+      - name: Check for security issues
+        run: |
+          if [ -f results.sarif ]; then
+            # Check if any issues were found
+            ISSUES=$(jq '.runs[0].results | length' results.sarif)
+            if [ "$ISSUES" -gt 0 ]; then
+              echo "❌ Gosec found $ISSUES security issue(s)"
+              echo "Check the Security tab for details"
+              exit 1
+            else
+              echo "✅ No security issues found"
+            fi
+          fi
+
