@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 )
 
@@ -66,15 +68,16 @@ func (s *ZombieProcessesSignal) Check(ctx context.Context) bool {
 			continue
 		}
 
-		// Check if directory name is numeric (PID)
+		// Validate directory name is a valid PID (all numeric)
 		name := entry.Name()
-		if len(name) == 0 || name[0] < '0' || name[0] > '9' {
+		if _, err := strconv.Atoi(name); err != nil {
+			// Not a valid PID, skip
 			continue
 		}
 
-		// Read /proc/PID/stat
-		statPath := "/proc/" + name + "/stat"
-		statData, err := os.ReadFile(statPath)
+		// Safely construct path to /proc/PID/stat
+		statPath := filepath.Join("/proc", name, "stat")
+		statData, err := os.ReadFile(statPath) // #nosec G304 -- path is sanitized: name is validated to be numeric PID
 		if err != nil {
 			continue
 		}
