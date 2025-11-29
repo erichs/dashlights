@@ -112,9 +112,15 @@ func getCurrentHeadSHA() (string, error) {
 
 	// HEAD points to a ref, read that ref
 	refPath := strings.TrimPrefix(headStr, "ref: ")
+
+	// Validate the ref path to prevent directory traversal
+	if strings.Contains(refPath, "..") {
+		return "", os.ErrInvalid
+	}
+
 	refPath = filepath.Join(".git", refPath)
 
-	shaContent, err := os.ReadFile(refPath)
+	shaContent, err := os.ReadFile(refPath) // #nosec G304 -- refPath is sanitized: validated to not contain ".."
 	if err != nil {
 		return "", err
 	}
@@ -160,8 +166,14 @@ func isHeadOnTag(headSHA string) bool {
 			continue
 		}
 
-		tagPath := filepath.Join(tagsDir, entry.Name())
-		tagSHA, err := os.ReadFile(tagPath)
+		// Validate entry name to prevent directory traversal
+		entryName := entry.Name()
+		if strings.Contains(entryName, "..") || strings.Contains(entryName, "/") {
+			continue
+		}
+
+		tagPath := filepath.Join(tagsDir, entryName)
+		tagSHA, err := os.ReadFile(tagPath) // #nosec G304 -- tagPath is sanitized: entryName validated to not contain ".." or "/"
 		if err != nil {
 			continue
 		}

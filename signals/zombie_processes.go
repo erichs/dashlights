@@ -3,6 +3,7 @@ package signals
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -10,13 +11,34 @@ import (
 	"strings"
 )
 
+// procFS is an interface for interacting with the /proc filesystem
+// This allows for mocking in tests
+type procFS interface {
+	ReadFile(name string) ([]byte, error)
+	ReadDir(name string) ([]fs.DirEntry, error)
+}
+
+// realProcFS implements procFS using actual OS calls
+type realProcFS struct{}
+
+func (r *realProcFS) ReadFile(name string) ([]byte, error) {
+	return os.ReadFile(name) // #nosec G304 -- paths are validated by caller (checkWithFS)
+}
+
+func (r *realProcFS) ReadDir(name string) ([]fs.DirEntry, error) {
+	return os.ReadDir(name)
+}
+
 // ZombieProcessesSignal checks for excessive zombie processes
 type ZombieProcessesSignal struct {
 	count int
+	fs    procFS
 }
 
 func NewZombieProcessesSignal() *ZombieProcessesSignal {
-	return &ZombieProcessesSignal{}
+	return &ZombieProcessesSignal{
+		fs: &realProcFS{},
+	}
 }
 
 func (s *ZombieProcessesSignal) Name() string {
@@ -41,8 +63,14 @@ func (s *ZombieProcessesSignal) Check(ctx context.Context) bool {
 		return false
 	}
 
+	return s.checkWithFS(s.fs)
+}
+
+// checkWithFS performs the actual check using the provided filesystem interface
+// This is separated to allow for testing with mocked filesystems
+func (s *ZombieProcessesSignal) checkWithFS(fs procFS) bool {
 	// Read /proc/stat to count zombie processes
-	data, err := os.ReadFile("/proc/stat")
+	data, err := fs.ReadFile("/proc/stat")
 	if err != nil {
 		return false
 	}
@@ -58,7 +86,7 @@ func (s *ZombieProcessesSignal) Check(ctx context.Context) bool {
 
 	// Count zombie processes by checking /proc/*/stat
 	zombieCount := 0
-	entries, err := os.ReadDir("/proc")
+	entries, err := fs.ReadDir("/proc")
 	if err != nil {
 		return false
 	}
@@ -77,7 +105,7 @@ func (s *ZombieProcessesSignal) Check(ctx context.Context) bool {
 
 		// Safely construct path to /proc/PID/stat
 		statPath := filepath.Join("/proc", name, "stat")
-		statData, err := os.ReadFile(statPath) // #nosec G304 -- path is sanitized: name is validated to be numeric PID
+		statData, err := fs.ReadFile(statPath) // #nosec G304 -- path is sanitized: name is validated to be numeric PID
 		if err != nil {
 			continue
 		}

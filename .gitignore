@@ -1,3 +1,4 @@
 dashlights
 dist/*
 coverage.out
+coverage_*
