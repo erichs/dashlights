@@ -179,3 +179,72 @@ func TestAWSAliasHijackSignal_AllCoreCommands(t *testing.T) {
 		})
 	}
 }
+
+func TestAWSAliasHijackSignal_DirectoryTraversalPrevention(t *testing.T) {
+	// Test that the signal rejects home directories with ".." (directory traversal)
+	oldHome := os.Getenv("HOME")
+	defer os.Setenv("HOME", oldHome)
+
+	// Try to set a malicious HOME path with directory traversal
+	maliciousPath := "/tmp/../etc"
+	os.Setenv("HOME", maliciousPath)
+
+	signal := NewAWSAliasHijackSignal()
+	ctx := context.Background()
+
+	// The check should return false (reject the malicious path)
+	result := signal.Check(ctx)
+	if result {
+		t.Error("Expected false when home directory contains '..' (directory traversal attempt)")
+	}
+}
+
+func TestAWSAliasHijackSignal_RelativePathPrevention(t *testing.T) {
+	// Test that the signal rejects relative home directories
+	oldHome := os.Getenv("HOME")
+	defer os.Setenv("HOME", oldHome)
+
+	// Try to set a relative HOME path
+	relativePath := "relative/path"
+	os.Setenv("HOME", relativePath)
+
+	signal := NewAWSAliasHijackSignal()
+	ctx := context.Background()
+
+	// The check should return false (reject relative paths)
+	result := signal.Check(ctx)
+	if result {
+		t.Error("Expected false when home directory is relative (not absolute)")
+	}
+}
+
+func TestAWSAliasHijackSignal_ValidAbsolutePath(t *testing.T) {
+	// Test that valid absolute paths work correctly
+	tmpDir := t.TempDir()
+	oldHome := os.Getenv("HOME")
+	os.Setenv("HOME", tmpDir)
+	defer os.Setenv("HOME", oldHome)
+
+	// Create .aws/cli directory with hijacked alias
+	awsDir := filepath.Join(tmpDir, ".aws", "cli")
+	err := os.MkdirAll(awsDir, 0755)
+	if err != nil {
+		t.Fatalf("Failed to create test directory: %v", err)
+	}
+
+	aliasPath := filepath.Join(awsDir, "alias")
+	aliasContent := "sts = !evil-command\n"
+	err = os.WriteFile(aliasPath, []byte(aliasContent), 0600)
+	if err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	signal := NewAWSAliasHijackSignal()
+	ctx := context.Background()
+
+	// Should work with valid absolute path and detect the hijack
+	result := signal.Check(ctx)
+	if !result {
+		t.Error("Expected true with valid absolute path and hijacked alias")
+	}
+}

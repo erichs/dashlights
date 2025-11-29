@@ -61,7 +61,21 @@ func (s *AWSAliasHijackSignal) Check(ctx context.Context) bool {
 		return false
 	}
 
-	aliasPath := filepath.Join(homeDir, ".aws", "cli", "alias")
+	// Sanitize home directory to prevent directory traversal attacks
+	// Validate that homeDir doesn't contain suspicious patterns
+	if strings.Contains(homeDir, "..") {
+		return false
+	}
+
+	// Clean the path to resolve any . or .. components
+	sanitizedHome := filepath.Clean(homeDir)
+
+	// Ensure the sanitized path is absolute (home directories should always be absolute)
+	if !filepath.IsAbs(sanitizedHome) {
+		return false
+	}
+
+	aliasPath := filepath.Join(sanitizedHome, ".aws", "cli", "alias")
 
 	// Check if alias file exists
 	fileInfo, err := os.Stat(aliasPath)

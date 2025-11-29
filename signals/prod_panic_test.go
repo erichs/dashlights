@@ -180,3 +180,69 @@ kind: Config
 		t.Errorf("Expected source 'kubectl context', got '%s'", signal.source)
 	}
 }
+
+func TestProdPanicSignal_checkKubeContext_DirectoryTraversalPrevention(t *testing.T) {
+	// Test that the signal rejects home directories with ".." (directory traversal)
+	oldHome := os.Getenv("HOME")
+	defer os.Setenv("HOME", oldHome)
+
+	// Try to set a malicious HOME path with directory traversal
+	maliciousPath := "/tmp/../etc"
+	os.Setenv("HOME", maliciousPath)
+
+	signal := NewProdPanicSignal()
+
+	// The check should return false (reject the malicious path)
+	result := signal.checkKubeContext()
+	if result {
+		t.Error("Expected false when home directory contains '..' (directory traversal attempt)")
+	}
+}
+
+func TestProdPanicSignal_checkKubeContext_RelativePathPrevention(t *testing.T) {
+	// Test that the signal rejects relative home directories
+	oldHome := os.Getenv("HOME")
+	defer os.Setenv("HOME", oldHome)
+
+	// Try to set a relative HOME path
+	relativePath := "relative/path"
+	os.Setenv("HOME", relativePath)
+
+	signal := NewProdPanicSignal()
+
+	// The check should return false (reject relative paths)
+	result := signal.checkKubeContext()
+	if result {
+		t.Error("Expected false when home directory is relative (not absolute)")
+	}
+}
+
+func TestProdPanicSignal_checkKubeContext_ValidAbsolutePath(t *testing.T) {
+	// Test that valid absolute paths work correctly
+	tmpDir := t.TempDir()
+	oldHome := os.Getenv("HOME")
+	os.Setenv("HOME", tmpDir)
+	defer os.Setenv("HOME", oldHome)
+
+	// Create .kube directory with production config
+	kubeDir := filepath.Join(tmpDir, ".kube")
+	os.MkdirAll(kubeDir, 0755)
+
+	kubeConfig := filepath.Join(kubeDir, "config")
+	content := `apiVersion: v1
+current-context: production
+kind: Config
+`
+	err := os.WriteFile(kubeConfig, []byte(content), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create kube config: %v", err)
+	}
+
+	signal := NewProdPanicSignal()
+
+	// Should work with valid absolute path
+	result := signal.checkKubeContext()
+	if !result {
+		t.Error("Expected true with valid absolute path and production context")
+	}
+}
