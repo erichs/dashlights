@@ -5,13 +5,12 @@ package signals
 func GetAllSignals() []Signal {
 	return []Signal{
 		// IAM signals
-		// NewSudoCachedSignal(),      // DISABLED: 12ms - Runs sudo command
-		NewNakedCredentialsSignal(),
-		NewPrivilegedPathSignal(),
-		NewAWSAliasHijackSignal(),
+		NewNakedCredentialsSignal(), // Env var check
+		NewPrivilegedPathSignal(),   // Env var check
+		NewAWSAliasHijackSignal(),   // File read (with permissions check)
 
 		// OpSec signals
-		NewLDPreloadSignal(),
+		NewLDPreloadSignal(),          // Env var check
 		NewHistoryDisabledSignal(),    // Env var check
 		NewProdPanicSignal(),          // File reads (kubectl/aws config)
 		NewProxyActiveSignal(),        // Env var check
@@ -40,5 +39,10 @@ func GetAllSignals() []Signal {
 		NewZombieProcessesSignal(),  // /proc scan
 		NewDanglingSymlinksSignal(), // Directory scan
 		NewTimeDriftSignal(),        // File create/stat/delete
+
+		// InfraSec signals
+		NewTerraformStateLocalSignal(), // File stat
+		NewRootKubeContextSignal(),     // File read (.kube/config)
+		NewDangerousTFVarSignal(),      // Env var check
 	}
 }
