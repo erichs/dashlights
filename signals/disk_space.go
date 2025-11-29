@@ -54,9 +54,17 @@ func (s *DiskSpaceSignal) checkPath(path string) bool {
 		return false
 	}
 
+	// Validate Bsize is positive before conversion to prevent integer overflow
+	if stat.Bsize <= 0 {
+		return false
+	}
+
+	// Safe conversion: we've validated Bsize is positive
+	blockSize := uint64(stat.Bsize)
+
 	// Calculate percentage used
-	total := stat.Blocks * uint64(stat.Bsize)
-	free := stat.Bfree * uint64(stat.Bsize)
+	total := stat.Blocks * blockSize
+	free := stat.Bfree * blockSize
 	used := total - free
 
 	if total == 0 {
