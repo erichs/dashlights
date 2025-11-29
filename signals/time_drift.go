@@ -48,8 +48,11 @@ func (s *TimeDriftSignal) Check(ctx context.Context) bool {
 	// Close the file and check for errors
 	if err := f.Close(); err != nil {
 		// If close fails, still try to clean up the file
-		// Ignore remove error since we're already in an error path
-		_ = os.Remove(tmpFile)
+		// We're already in an error path, so we do best-effort cleanup
+		if removeErr := os.Remove(tmpFile); removeErr != nil {
+			// Cleanup failed, but we're already returning false due to close error
+			// Nothing more we can do here
+		}
 		return false
 	}
 

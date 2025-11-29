@@ -90,7 +90,11 @@ func isInGitignore(filename string) bool {
 
 		// Check for wildcard patterns
 		if strings.Contains(line, "*") {
-			matched, _ := filepath.Match(line, filename)
+			matched, err := filepath.Match(line, filename)
+			if err != nil {
+				// Invalid pattern, skip it
+				continue
+			}
 			if matched {
 				return true
 			}

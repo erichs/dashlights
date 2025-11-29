@@ -148,3 +148,37 @@ func TestUntrackedCryptoKeysSignal_Check_MultipleKeyExtensions(t *testing.T) {
 		t.Error("Expected foundKeys to contain key files")
 	}
 }
+
+func TestUntrackedCryptoKeysSignal_Check_InvalidGitignorePattern(t *testing.T) {
+	// Create a temp directory with key file and .gitignore with invalid pattern
+	tmpDir := t.TempDir()
+
+	// Create key file
+	if err := os.WriteFile(tmpDir+"/private.key", []byte("test"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create .gitignore with invalid pattern (malformed bracket expression)
+	// This should be skipped and the key should be detected as unignored
+	if err := os.WriteFile(tmpDir+"/.gitignore", []byte("[invalid\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Save and restore cwd
+	oldCwd, _ := os.Getwd()
+	defer os.Chdir(oldCwd)
+
+	os.Chdir(tmpDir)
+
+	signal := NewUntrackedCryptoKeysSignal()
+	ctx := context.Background()
+
+	// Should detect the key since the invalid pattern is skipped
+	if !signal.Check(ctx) {
+		t.Error("Expected true when key file is not matched by invalid pattern")
+	}
+
+	if len(signal.foundKeys) == 0 {
+		t.Error("Expected foundKeys to contain private.key")
+	}
+}
