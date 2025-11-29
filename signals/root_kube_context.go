@@ -43,7 +43,21 @@ func (s *RootKubeContextSignal) Check(ctx context.Context) bool {
 		return false
 	}
 
-	kubeConfig := filepath.Join(homeDir, ".kube", "config")
+	// Sanitize home directory to prevent directory traversal attacks
+	// Validate that homeDir doesn't contain suspicious patterns
+	if strings.Contains(homeDir, "..") {
+		return false
+	}
+
+	// Clean the path to resolve any . or .. components
+	sanitizedHome := filepath.Clean(homeDir)
+
+	// Ensure the sanitized path is absolute (home directories should always be absolute)
+	if !filepath.IsAbs(sanitizedHome) {
+		return false
+	}
+
+	kubeConfig := filepath.Join(sanitizedHome, ".kube", "config")
 	file, err := os.Open(kubeConfig)
 	if err != nil {
 		// No kube config - not using Kubernetes

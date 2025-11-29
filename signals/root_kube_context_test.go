@@ -176,3 +176,82 @@ func TestRootKubeContextSignal_Metadata(t *testing.T) {
 		t.Error("Remediation should not be empty")
 	}
 }
+
+func TestRootKubeContextSignal_DirectoryTraversalPrevention(t *testing.T) {
+	// Test that the signal rejects home directories with ".." (directory traversal)
+	// We can't easily mock os.UserHomeDir(), but we can test with environment variables
+	// that might influence it on some systems
+
+	// Save original HOME
+	originalHome := os.Getenv("HOME")
+	defer os.Setenv("HOME", originalHome)
+
+	// Try to set a malicious HOME path with directory traversal
+	maliciousPath := "/tmp/../etc"
+	os.Setenv("HOME", maliciousPath)
+
+	signal := NewRootKubeContextSignal()
+	ctx := context.Background()
+
+	// The check should return false (reject the malicious path)
+	result := signal.Check(ctx)
+	if result {
+		t.Error("Expected false when home directory contains '..' (directory traversal attempt)")
+	}
+}
+
+func TestRootKubeContextSignal_RelativePathPrevention(t *testing.T) {
+	// Test that the signal rejects relative home directories
+	originalHome := os.Getenv("HOME")
+	defer os.Setenv("HOME", originalHome)
+
+	// Try to set a relative HOME path
+	relativePath := "relative/path"
+	os.Setenv("HOME", relativePath)
+
+	signal := NewRootKubeContextSignal()
+	ctx := context.Background()
+
+	// The check should return false (reject relative paths)
+	result := signal.Check(ctx)
+	if result {
+		t.Error("Expected false when home directory is relative (not absolute)")
+	}
+}
+
+func TestRootKubeContextSignal_ValidAbsolutePath(t *testing.T) {
+	// Test that valid absolute paths work correctly
+	tmpDir := t.TempDir()
+	originalHome := os.Getenv("HOME")
+	os.Setenv("HOME", tmpDir)
+	defer os.Setenv("HOME", originalHome)
+
+	// Create .kube directory with kube-system config
+	kubeDir := filepath.Join(tmpDir, ".kube")
+	os.MkdirAll(kubeDir, 0755)
+
+	kubeConfig := `apiVersion: v1
+kind: Config
+current-context: test
+contexts:
+- context:
+    cluster: test
+    namespace: kube-system
+    user: admin
+  name: test
+`
+	configPath := filepath.Join(kubeDir, "config")
+	err := os.WriteFile(configPath, []byte(kubeConfig), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create kube config: %v", err)
+	}
+
+	signal := NewRootKubeContextSignal()
+	ctx := context.Background()
+
+	// Should work with valid absolute path
+	result := signal.Check(ctx)
+	if !result {
+		t.Error("Expected true with valid absolute path and kube-system namespace")
+	}
+}
