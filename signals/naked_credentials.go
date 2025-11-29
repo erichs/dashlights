@@ -31,7 +31,7 @@ func (s *NakedCredentialsSignal) Diagnostic() string {
 }
 
 func (s *NakedCredentialsSignal) Remediation() string {
-	return "Use credential helpers, keychains, or secret management tools instead"
+	return "Use 1Password (op://), dotenvx (encrypted:), or other secret management tools"
 }
 
 func (s *NakedCredentialsSignal) Check(ctx context.Context) bool {
@@ -78,6 +78,16 @@ func (s *NakedCredentialsSignal) Check(ctx context.Context) bool {
 
 		// Skip DASHLIGHT_ variables (those are ours)
 		if strings.HasPrefix(varName, "DASHLIGHT_") {
+			continue
+		}
+
+		// Skip 1Password secret references
+		if strings.HasPrefix(varValue, "op://") {
+			continue
+		}
+
+		// Skip dotenvx encrypted values
+		if strings.HasPrefix(varValue, "encrypted:") {
 			continue
 		}
 
