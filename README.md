@@ -1,5 +1,6 @@
 # Dashlights
 [![Go Report Card](https://goreportcard.com/badge/github.com/erichs/dashlights)](https://goreportcard.com/report/github.com/erichs/dashlights)
+[![codecov](https://codecov.io/gh/erichs/dashlights/branch/main/graph/badge.svg)](https://codecov.io/gh/erichs/dashlights)
 
 > A fast security hygiene checker that signals impending security issues
 
