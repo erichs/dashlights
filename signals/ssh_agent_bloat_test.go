@@ -225,3 +225,188 @@ func handleMockAgentConnection(conn net.Conn, keyCount uint32) {
 
 	conn.Write(response)
 }
+
+func TestSSHAgentBloatSignal_IncompleteHeader(t *testing.T) {
+	// Create a mock agent that sends incomplete header (less than 5 bytes)
+	sockPath := createMockAgentWithIncompleteHeader(t)
+
+	originalSock := os.Getenv("SSH_AUTH_SOCK")
+	os.Setenv("SSH_AUTH_SOCK", sockPath)
+	defer func() {
+		if originalSock != "" {
+			os.Setenv("SSH_AUTH_SOCK", originalSock)
+		} else {
+			os.Unsetenv("SSH_AUTH_SOCK")
+		}
+	}()
+
+	signal := NewSSHAgentBloatSignal()
+	ctx := context.Background()
+
+	// Should return false (error handled gracefully)
+	result := signal.Check(ctx)
+	if result {
+		t.Error("Expected false when agent sends incomplete header")
+	}
+}
+
+func TestSSHAgentBloatSignal_IncompleteCount(t *testing.T) {
+	// Create a mock agent that sends incomplete count (less than 4 bytes)
+	sockPath := createMockAgentWithIncompleteCount(t)
+
+	originalSock := os.Getenv("SSH_AUTH_SOCK")
+	os.Setenv("SSH_AUTH_SOCK", sockPath)
+	defer func() {
+		if originalSock != "" {
+			os.Setenv("SSH_AUTH_SOCK", originalSock)
+		} else {
+			os.Unsetenv("SSH_AUTH_SOCK")
+		}
+	}()
+
+	signal := NewSSHAgentBloatSignal()
+	ctx := context.Background()
+
+	// Should return false (error handled gracefully)
+	result := signal.Check(ctx)
+	if result {
+		t.Error("Expected false when agent sends incomplete count")
+	}
+}
+
+func TestSSHAgentBloatSignal_WrongMessageType(t *testing.T) {
+	// Create a mock agent that sends wrong message type
+	sockPath := createMockAgentWithWrongMessageType(t)
+
+	originalSock := os.Getenv("SSH_AUTH_SOCK")
+	os.Setenv("SSH_AUTH_SOCK", sockPath)
+	defer func() {
+		if originalSock != "" {
+			os.Setenv("SSH_AUTH_SOCK", originalSock)
+		} else {
+			os.Unsetenv("SSH_AUTH_SOCK")
+		}
+	}()
+
+	signal := NewSSHAgentBloatSignal()
+	ctx := context.Background()
+
+	// Should return false (error handled gracefully)
+	result := signal.Check(ctx)
+	if result {
+		t.Error("Expected false when agent sends wrong message type")
+	}
+}
+
+// createMockAgentWithIncompleteHeader creates a mock agent that sends only 3 bytes
+func createMockAgentWithIncompleteHeader(t *testing.T) string {
+	sockPath := filepath.Join("/tmp", fmt.Sprintf("test_agent_incomplete_header_%d.sock", time.Now().UnixNano()))
+
+	listener, err := net.Listen("unix", sockPath)
+	if err != nil {
+		t.Fatalf("Failed to create mock agent socket: %v", err)
+	}
+
+	t.Cleanup(func() {
+		listener.Close()
+		os.Remove(sockPath)
+	})
+
+	go func() {
+		for {
+			conn, err := listener.Accept()
+			if err != nil {
+				return
+			}
+			go func(c net.Conn) {
+				defer c.Close()
+				// Read request
+				header := make([]byte, 5)
+				c.Read(header)
+				// Send incomplete response (only 3 bytes instead of 5)
+				c.Write([]byte{0, 0, 0})
+			}(conn)
+		}
+	}()
+
+	time.Sleep(5 * time.Millisecond)
+	return sockPath
+}
+
+// createMockAgentWithIncompleteCount creates a mock agent that sends incomplete count
+func createMockAgentWithIncompleteCount(t *testing.T) string {
+	sockPath := filepath.Join("/tmp", fmt.Sprintf("test_agent_incomplete_count_%d.sock", time.Now().UnixNano()))
+
+	listener, err := net.Listen("unix", sockPath)
+	if err != nil {
+		t.Fatalf("Failed to create mock agent socket: %v", err)
+	}
+
+	t.Cleanup(func() {
+		listener.Close()
+		os.Remove(sockPath)
+	})
+
+	go func() {
+		for {
+			conn, err := listener.Accept()
+			if err != nil {
+				return
+			}
+			go func(c net.Conn) {
+				defer c.Close()
+				// Read request
+				header := make([]byte, 5)
+				c.Read(header)
+				// Send valid header but incomplete count (only 2 bytes instead of 4)
+				response := make([]byte, 7)
+				binary.BigEndian.PutUint32(response[0:4], 5)
+				response[4] = msgIdentitiesAnswer
+				// Only send 7 bytes total (5 for header + 2 for partial count)
+				c.Write(response[:7])
+			}(conn)
+		}
+	}()
+
+	time.Sleep(5 * time.Millisecond)
+	return sockPath
+}
+
+// createMockAgentWithWrongMessageType creates a mock agent that sends wrong message type
+func createMockAgentWithWrongMessageType(t *testing.T) string {
+	sockPath := filepath.Join("/tmp", fmt.Sprintf("test_agent_wrong_type_%d.sock", time.Now().UnixNano()))
+
+	listener, err := net.Listen("unix", sockPath)
+	if err != nil {
+		t.Fatalf("Failed to create mock agent socket: %v", err)
+	}
+
+	t.Cleanup(func() {
+		listener.Close()
+		os.Remove(sockPath)
+	})
+
+	go func() {
+		for {
+			conn, err := listener.Accept()
+			if err != nil {
+				return
+			}
+			go func(c net.Conn) {
+				defer c.Close()
+				// Read request
+				header := make([]byte, 5)
+				c.Read(header)
+				// Send response with wrong message type (99 instead of msgIdentitiesAnswer)
+				response := make([]byte, 9)
+				binary.BigEndian.PutUint32(response[0:4], 5)
+				response[4] = 99 // Wrong message type
+				binary.BigEndian.PutUint32(response[5:9], 10)
+				c.Write(response)
+			}(conn)
+		}
+	}()
+
+	time.Sleep(5 * time.Millisecond)
+	return sockPath
+}

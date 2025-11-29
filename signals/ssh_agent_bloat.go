@@ -86,19 +86,35 @@ func getAgentKeyCount(socketPath string) (uint32, error) {
 
 	// Read response header (5 bytes: length + type)
 	header := make([]byte, 5)
-	if _, err := conn.Read(header); err != nil {
+	n, err := conn.Read(header)
+	if err != nil {
 		return 0, err
 	}
 
+	// Verify we read enough bytes (need at least 5 bytes for header)
+	if n < 5 {
+		return 0, fmt.Errorf("incomplete header: got %d bytes, expected 5", n)
+	}
+
 	// Verify we got SSH_AGENT_IDENTITIES_ANSWER
+	// Additional bounds check to satisfy gosec G602
+	if len(header) < 5 {
+		return 0, fmt.Errorf("header too short: %d bytes", len(header))
+	}
 	if header[4] != msgIdentitiesAnswer {
 		return 0, fmt.Errorf("unexpected message type: %d", header[4])
 	}
 
 	// Read the key count (next 4 bytes)
 	countBuf := make([]byte, 4)
-	if _, err := conn.Read(countBuf); err != nil {
+	n, err = conn.Read(countBuf)
+	if err != nil {
 		return 0, err
+	}
+
+	// Verify we read enough bytes (need 4 bytes for count)
+	if n < 4 {
+		return 0, fmt.Errorf("incomplete count: got %d bytes, expected 4", n)
 	}
 
 	// Parse as big-endian uint32
