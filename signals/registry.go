@@ -6,33 +6,39 @@ func GetAllSignals() []Signal {
 	return []Signal{
 		// IAM signals
 		// NewSudoCachedSignal(),      // DISABLED: 12ms - Runs sudo command
-		NewNakedCredentialsSignal(), // <1ms - Env var scan
-		NewPrivilegedPathSignal(),   // <1ms - PATH parsing
-		NewAWSAliasHijackSignal(),   // <1ms - File read and parse
+		NewNakedCredentialsSignal(),
+		NewPrivilegedPathSignal(),
+		NewAWSAliasHijackSignal(),
 
 		// OpSec signals
-		NewLDPreloadSignal(),          // <1ms - Env var check
-		NewHistoryDisabledSignal(),    // <1ms - Env var check
-		NewProdPanicSignal(),          // 4ms - File reads (kubectl/aws config)
-		NewProxyActiveSignal(),        // <1ms - Env var check
-		NewPermissiveUmaskSignal(),    // <1ms - Single syscall
-		NewDockerSocketSignal(),       // 5ms - File stat
-		NewDebugEnabledSignal(),       // <1ms - Env var check
-		NewHistoryPermissionsSignal(), // <1ms - File stat checks
-		NewSSHAgentBloatSignal(),      // <1ms - Unix socket query
-		NewSSHKeysSignal(),            // 5ms - File stat checks
+		NewLDPreloadSignal(),
+		NewHistoryDisabledSignal(),    // Env var check
+		NewProdPanicSignal(),          // File reads (kubectl/aws config)
+		NewProxyActiveSignal(),        // Env var check
+		NewPermissiveUmaskSignal(),    // Single syscall
+		NewDockerSocketSignal(),       // File stat
+		NewDebugEnabledSignal(),       // Env var check
+		NewHistoryPermissionsSignal(), // File stat checks
+		NewSSHAgentBloatSignal(),      // Unix socket query
+		NewSSHKeysSignal(),            // File stat checks
 
 		// Repository hygiene signals
-		NewEnvNotIgnoredSignal(),       // 4ms - Reads .gitignore
-		NewRootOwnedHomeSignal(),       // 5ms - File stat checks
-		NewWorldWritableConfigSignal(), // 5ms - File stat checks
-		NewUntrackedCryptoKeysSignal(), // 5ms - Directory scan
+		NewEnvNotIgnoredSignal(),       // Reads .gitignore
+		NewRootOwnedHomeSignal(),       // File stat checks
+		NewWorldWritableConfigSignal(), // File stat checks
+		NewUntrackedCryptoKeysSignal(), // Directory scan
+		NewGoReplaceSignal(),           // File read
+		NewPyCachePollutionSignal(),    // Directory walk (performance)
+		NewNpmrcTokensSignal(),         // File read
+		NewCargoPathDepsSignal(),       // File read
+		NewMissingInitPySignal(),       // Test failures - needs investigation
+		NewSnapshotDependencySignal(),  // Optimized .git file reads (was 4.5ms with shell, now ~34μs)
 
 		// System health signals
-		NewDiskSpaceSignal(),        // 4ms - Syscall
-		NewRebootPendingSignal(),    // 5ms - File stat
-		NewZombieProcessesSignal(),  // 5ms - /proc scan
-		NewDanglingSymlinksSignal(), // <1ms - Directory scan
-		NewTimeDriftSignal(),        // <1ms - File create/stat/delete
+		NewDiskSpaceSignal(),        // Syscall
+		NewRebootPendingSignal(),    // File stat
+		NewZombieProcessesSignal(),  // /proc scan
+		NewDanglingSymlinksSignal(), // Directory scan
+		NewTimeDriftSignal(),        // File create/stat/delete
 	}
 }
