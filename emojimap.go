@@ -74,4 +74,3 @@ func displayEmojiList(w io.Writer) {
 		flexPrintf(w, "%-20s %-10s %s\n", entry.label, entry.hexCode, entry.glyph)
 	}
 }
-

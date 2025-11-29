@@ -1,13 +1,16 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	arg "github.com/alexflint/go-arg"
+	"github.com/erichs/dashlights/signals"
 	"github.com/fatih/color"
 )
 
@@ -47,7 +50,15 @@ func init() {
 
 func main() {
 	arg.MustParse(&args)
-	display(os.Stdout, &lights)
+
+	// Run security signal checks with a tight timeout for performance
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+
+	allSignals := signals.GetAllSignals()
+	results := signals.CheckAll(ctx, allSignals)
+
+	display(os.Stdout, &lights, results)
 }
 
 func parseEnviron(environ []string, lights *[]dashlight) {
@@ -56,7 +67,7 @@ func parseEnviron(environ []string, lights *[]dashlight) {
 	}
 }
 
-func display(w io.Writer, lights *[]dashlight) {
+func display(w io.Writer, lights *[]dashlight, results []signals.Result) {
 	if args.ListMode {
 		displayColorList(w)
 		flexPrintln(w, "")
@@ -67,9 +78,57 @@ func display(w io.Writer, lights *[]dashlight) {
 		displayClearCodes(w, lights)
 		return
 	}
-	displayDashlights(w, lights)
+
+	// New default output: 🚨 {count} {DASHLIGHT_runes}
 	if args.ObdMode {
-		displayDiagnostics(w, lights)
+		// Diagnostic mode: show detailed signal information
+		displaySignalDiagnostics(w, results)
+	} else {
+		// Default mode: show siren, count, and DASHLIGHT runes
+		displaySecurityStatus(w, results, lights)
+	}
+}
+
+// displaySecurityStatus shows the default output: 🚨 {count} {DASHLIGHT_runes}
+func displaySecurityStatus(w io.Writer, results []signals.Result, lights *[]dashlight) {
+	// Count detected signals
+	count := signals.CountDetected(results)
+
+	// Only show siren if there are security issues
+	if count > 0 {
+		flexPrintf(w, "🚨 %d", count)
+	}
+
+	// Append DASHLIGHT_ runes if any
+	if len(*lights) > 0 {
+		if count > 0 {
+			flexPrintf(w, " ")
+		}
+		for _, light := range *lights {
+			flexPrintf(w, "%s", light.Glyph)
+		}
+	}
+
+	flexPrintln(w, "")
+}
+
+// displaySignalDiagnostics shows detailed diagnostic information for detected signals
+func displaySignalDiagnostics(w io.Writer, results []signals.Result) {
+	detected := signals.GetDetected(results)
+
+	if len(detected) == 0 {
+		flexPrintln(w, "✅ No security issues detected")
+		return
+	}
+
+	flexPrintln(w, "Security Issues Detected:")
+	flexPrintln(w, "")
+
+	for _, result := range detected {
+		sig := result.Signal
+		flexPrintf(w, "%s %s\n", sig.Emoji(), sig.Diagnostic())
+		flexPrintf(w, "   → Fix: %s\n", sig.Remediation())
+		flexPrintln(w, "")
 	}
 }
 

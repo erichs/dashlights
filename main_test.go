@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/erichs/dashlights/signals"
 	"github.com/fatih/color"
 )
 
@@ -138,7 +139,7 @@ func TestListColorModeDisplay(t *testing.T) {
 	lights := make([]dashlight, 0)
 	parseDashlightFromEnv(&lights, "DASHLIGHT_LCM_0021=")
 
-	display(&b, &lights)
+	display(&b, &lights, nil)
 	if !strings.Contains(b.String(), "BGWHITE") {
 		t.Errorf("List mode should contain color attribute keys, found: %s", b.String())
 	}
@@ -152,7 +153,7 @@ func TestClearModeDisplay(t *testing.T) {
 	lights := make([]dashlight, 0)
 	parseDashlightFromEnv(&lights, "DASHLIGHT_CM_0021=")
 
-	display(&b, &lights)
+	display(&b, &lights, nil)
 	expectStr := "unset DASHLIGHT_CM_0021"
 	if !strings.Contains(b.String(), expectStr) {
 		t.Errorf("Clear mode should '%s', found: %s", expectStr, b.String())
@@ -167,14 +168,12 @@ func TestDiagModeDisplay(t *testing.T) {
 	lights := make([]dashlight, 0)
 	parseDashlightFromEnv(&lights, "DASHLIGHT_DM_0021=bar diagnostic")
 
-	display(&b, &lights)
-	if !strings.Contains(b.String(), lights[0].Glyph) {
-		t.Errorf("Diag mode should lead with dashlight display containing '%s', found: '%s'", lights[0].Glyph, b.String())
-	}
+	// Pass empty results for this test
+	display(&b, &lights, []signals.Result{})
 
-	expectStr := " DM - bar diagnostic"
-	if !strings.Contains(b.String(), expectStr) {
-		t.Errorf("Expected to see '%s' in:\n%s", expectStr, b.String())
+	// In diagnostic mode with no security signals, should show "No security issues"
+	if !strings.Contains(b.String(), "No security issues") {
+		t.Errorf("Expected to see 'No security issues' in:\n%s", b.String())
 	}
 }
 

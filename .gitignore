@@ -1,2 +1,6 @@
 dashlights
 dist/*
+coverage.out
+coverage.txt
+coverage_*
+coverage.html
