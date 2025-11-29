@@ -111,4 +111,3 @@ func (s *AWSAliasHijackSignal) Check(ctx context.Context) bool {
 
 	return false
 }
-

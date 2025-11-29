@@ -167,4 +167,3 @@ func TestNpmrcTokensSignal_OnlyComments(t *testing.T) {
 		t.Error("Expected false when .npmrc has only comments")
 	}
 }
-

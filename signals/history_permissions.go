@@ -44,7 +44,7 @@ func (s *HistoryPermissionsSignal) Check(ctx context.Context) bool {
 
 	for _, histFile := range historyFiles {
 		fullPath := filepath.Join(homeDir, histFile)
-		
+
 		// Check if file exists
 		fileInfo, err := os.Stat(fullPath)
 		if err != nil {
@@ -66,4 +66,3 @@ func (s *HistoryPermissionsSignal) Check(ctx context.Context) bool {
 
 	return false
 }
-

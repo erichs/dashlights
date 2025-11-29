@@ -9,37 +9,37 @@ import (
 type Signal interface {
 	// Check performs the security check and returns true if a problem is detected
 	Check(ctx context.Context) bool
-	
+
 	// Name returns the signal name (e.g., "Open Door")
 	Name() string
-	
+
 	// Emoji returns the signal-specific emoji for diagnostic mode
 	Emoji() string
-	
+
 	// Diagnostic returns a brief explanation of the detected issue
 	Diagnostic() string
-	
+
 	// Remediation returns suggested fix/mitigation steps
 	Remediation() string
 }
 
 // Result holds the outcome of a signal check
 type Result struct {
-	Signal      Signal
-	Detected    bool
-	Error       error
+	Signal   Signal
+	Detected bool
+	Error    error
 }
 
 // CheckAll runs all signal checks concurrently and returns results
 func CheckAll(ctx context.Context, signals []Signal) []Result {
 	results := make([]Result, len(signals))
 	var wg sync.WaitGroup
-	
+
 	for i, sig := range signals {
 		wg.Add(1)
 		go func(idx int, s Signal) {
 			defer wg.Done()
-			
+
 			// Use a panic recovery to ensure one bad signal doesn't crash everything
 			defer func() {
 				if r := recover(); r != nil {
@@ -50,7 +50,7 @@ func CheckAll(ctx context.Context, signals []Signal) []Result {
 					}
 				}
 			}()
-			
+
 			detected := s.Check(ctx)
 			results[idx] = Result{
 				Signal:   s,
@@ -59,7 +59,7 @@ func CheckAll(ctx context.Context, signals []Signal) []Result {
 			}
 		}(i, sig)
 	}
-	
+
 	wg.Wait()
 	return results
 }
@@ -85,4 +85,3 @@ func GetDetected(results []Result) []Result {
 	}
 	return detected
 }
-

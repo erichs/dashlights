@@ -68,7 +68,7 @@ func TestSnapshotDependencySignal_MainBranchWithSnapshot(t *testing.T) {
 	exec.Command("git", "config", "user.email", "test@example.com").Run()
 	exec.Command("git", "config", "user.name", "Test User").Run()
 	exec.Command("git", "checkout", "-b", "main").Run()
-	
+
 	// Need at least one commit
 	os.WriteFile("README.md", []byte("test"), 0644)
 	exec.Command("git", "add", ".").Run()
@@ -106,7 +106,7 @@ func TestSnapshotDependencySignal_ReleaseBranchWithSnapshot(t *testing.T) {
 	exec.Command("git", "config", "user.email", "test@example.com").Run()
 	exec.Command("git", "config", "user.name", "Test User").Run()
 	exec.Command("git", "checkout", "-b", "release/1.0").Run()
-	
+
 	// Need at least one commit
 	os.WriteFile("README.md", []byte("test"), 0644)
 	exec.Command("git", "add", ".").Run()
@@ -142,7 +142,7 @@ func TestSnapshotDependencySignal_GradleWithSnapshot(t *testing.T) {
 	exec.Command("git", "config", "user.email", "test@example.com").Run()
 	exec.Command("git", "config", "user.name", "Test User").Run()
 	exec.Command("git", "checkout", "-b", "main").Run()
-	
+
 	os.WriteFile("README.md", []byte("test"), 0644)
 	exec.Command("git", "add", ".").Run()
 	exec.Command("git", "commit", "-m", "initial").Run()
@@ -174,7 +174,7 @@ func TestSnapshotDependencySignal_NoSnapshot(t *testing.T) {
 	exec.Command("git", "config", "user.email", "test@example.com").Run()
 	exec.Command("git", "config", "user.name", "Test User").Run()
 	exec.Command("git", "checkout", "-b", "main").Run()
-	
+
 	os.WriteFile("README.md", []byte("test"), 0644)
 	exec.Command("git", "add", ".").Run()
 	exec.Command("git", "commit", "-m", "initial").Run()
@@ -199,4 +199,3 @@ func TestSnapshotDependencySignal_NoSnapshot(t *testing.T) {
 		t.Error("Expected false when no SNAPSHOT dependencies")
 	}
 }
-

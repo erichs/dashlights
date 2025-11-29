@@ -77,4 +77,3 @@ func (s *DangerousTFVarSignal) Check(ctx context.Context) bool {
 
 	return len(s.foundVars) > 0
 }
-

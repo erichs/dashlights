@@ -120,4 +120,3 @@ func TestTerraformStateLocalSignal_Metadata(t *testing.T) {
 		t.Error("Remediation should not be empty")
 	}
 }
-

@@ -48,12 +48,12 @@ func (s *GoReplaceSignal) Check(ctx context.Context) bool {
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
-		
+
 		// Skip comments
 		if strings.HasPrefix(line, "//") {
 			continue
 		}
-		
+
 		// Check for replace directive
 		if strings.HasPrefix(line, "replace ") {
 			// Extract the replace statement for diagnostic
@@ -64,4 +64,3 @@ func (s *GoReplaceSignal) Check(ctx context.Context) bool {
 
 	return false
 }
-

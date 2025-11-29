@@ -175,4 +175,3 @@ serde_json = "1.0"
 		t.Error("Expected false when 'path' doesn't indicate a path dependency")
 	}
 }
-

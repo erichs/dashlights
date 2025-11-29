@@ -40,12 +40,12 @@ func (s *WorldWritableConfigSignal) Check(ctx context.Context) bool {
 	if runtime.GOOS == "windows" {
 		return false
 	}
-	
+
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return false
 	}
-	
+
 	// Check common shell RC files
 	filesToCheck := []string{
 		".bashrc",
@@ -54,24 +54,23 @@ func (s *WorldWritableConfigSignal) Check(ctx context.Context) bool {
 		".bash_profile",
 		".zprofile",
 	}
-	
+
 	s.foundFiles = []string{}
-	
+
 	for _, file := range filesToCheck {
 		fullPath := filepath.Join(homeDir, file)
 		info, err := os.Stat(fullPath)
 		if err != nil {
 			continue // File doesn't exist
 		}
-		
+
 		perms := info.Mode().Perm()
-		
+
 		// Check if world-writable (others have write permission)
 		if perms&0002 != 0 {
 			s.foundFiles = append(s.foundFiles, file)
 		}
 	}
-	
+
 	return len(s.foundFiles) > 0
 }
-

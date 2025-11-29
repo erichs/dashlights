@@ -34,10 +34,10 @@ func (s *TimeDriftSignal) Remediation() string {
 func (s *TimeDriftSignal) Check(ctx context.Context) bool {
 	// Create a temporary file in the current directory
 	tmpFile := filepath.Join(".", ".dashlights_time_check")
-	
+
 	// Record system time before creating file
 	beforeTime := time.Now()
-	
+
 	// Create the file
 	f, err := os.Create(tmpFile)
 	if err != nil {
@@ -45,37 +45,36 @@ func (s *TimeDriftSignal) Check(ctx context.Context) bool {
 		return false
 	}
 	f.Close()
-	
+
 	// Ensure cleanup
 	defer os.Remove(tmpFile)
-	
+
 	// Stat the file to get its mtime
 	fileInfo, err := os.Stat(tmpFile)
 	if err != nil {
 		return false
 	}
-	
+
 	// Get the file's modification time
 	fileTime := fileInfo.ModTime()
-	
+
 	// Record system time after stat
 	afterTime := time.Now()
-	
+
 	// Calculate the drift
 	// The file's mtime should be between beforeTime and afterTime
 	// Allow a small tolerance for filesystem timestamp granularity (typically 1-2 seconds)
 	const toleranceSeconds = 5
-	
+
 	// Check if file time is too far in the past
 	if fileTime.Before(beforeTime.Add(-toleranceSeconds * time.Second)) {
 		return true
 	}
-	
+
 	// Check if file time is too far in the future
 	if fileTime.After(afterTime.Add(toleranceSeconds * time.Second)) {
 		return true
 	}
-	
+
 	return false
 }
-

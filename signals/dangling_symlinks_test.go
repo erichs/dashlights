@@ -162,4 +162,3 @@ func TestDanglingSymlinksSignal_RelativeSymlink(t *testing.T) {
 		t.Error("Expected true for dangling relative symlink")
 	}
 }
-

@@ -35,7 +35,7 @@ func (s *EnvNotIgnoredSignal) Check(ctx context.Context) bool {
 	if _, err := os.Stat(".env"); os.IsNotExist(err) {
 		return false
 	}
-	
+
 	// Check if .gitignore exists
 	gitignoreFile, err := os.Open(".gitignore")
 	if err != nil {
@@ -43,7 +43,7 @@ func (s *EnvNotIgnoredSignal) Check(ctx context.Context) bool {
 		return true
 	}
 	defer gitignoreFile.Close()
-	
+
 	// Check if .env is in .gitignore
 	scanner := bufio.NewScanner(gitignoreFile)
 	for scanner.Scan() {
@@ -57,8 +57,7 @@ func (s *EnvNotIgnoredSignal) Check(ctx context.Context) bool {
 			return false // .env is ignored, no problem
 		}
 	}
-	
+
 	// .env exists but is not in .gitignore
 	return true
 }
-

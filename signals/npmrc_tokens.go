@@ -57,9 +57,9 @@ func (s *NpmrcTokensSignal) Check(ctx context.Context) bool {
 		}
 
 		// Check for auth tokens
-		if strings.Contains(line, "_auth=") || 
-		   strings.Contains(line, "_authToken=") ||
-		   strings.Contains(line, "//registry.npmjs.org/:_authToken") {
+		if strings.Contains(line, "_auth=") ||
+			strings.Contains(line, "_authToken=") ||
+			strings.Contains(line, "//registry.npmjs.org/:_authToken") {
 			s.foundToken = line
 			return true
 		}
@@ -67,4 +67,3 @@ func (s *NpmrcTokensSignal) Check(ctx context.Context) bool {
 
 	return false
 }
-

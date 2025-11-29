@@ -38,21 +38,21 @@ func (s *UntrackedCryptoKeysSignal) Remediation() string {
 
 func (s *UntrackedCryptoKeysSignal) Check(ctx context.Context) bool {
 	s.foundKeys = []string{}
-	
+
 	// Key file extensions to look for
 	keyExtensions := []string{".pem", ".key", ".p12", ".pfx", ".jks", ".keystore"}
-	
+
 	// Find key files in current directory
 	entries, err := os.ReadDir(".")
 	if err != nil {
 		return false
 	}
-	
+
 	for _, entry := range entries {
 		if entry.IsDir() {
 			continue
 		}
-		
+
 		name := entry.Name()
 		for _, ext := range keyExtensions {
 			if strings.HasSuffix(name, ext) {
@@ -64,7 +64,7 @@ func (s *UntrackedCryptoKeysSignal) Check(ctx context.Context) bool {
 			}
 		}
 	}
-	
+
 	return len(s.foundKeys) > 0
 }
 
@@ -74,7 +74,7 @@ func isInGitignore(filename string) bool {
 		return false // No .gitignore means not ignored
 	}
 	defer gitignoreFile.Close()
-	
+
 	scanner := bufio.NewScanner(gitignoreFile)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -82,12 +82,12 @@ func isInGitignore(filename string) bool {
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
-		
+
 		// Check for exact match or pattern match
 		if line == filename {
 			return true
 		}
-		
+
 		// Check for wildcard patterns
 		if strings.Contains(line, "*") {
 			matched, _ := filepath.Match(line, filename)
@@ -96,7 +96,6 @@ func isInGitignore(filename string) bool {
 			}
 		}
 	}
-	
+
 	return false
 }
-

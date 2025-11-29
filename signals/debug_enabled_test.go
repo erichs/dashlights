@@ -142,4 +142,3 @@ func TestDebugEnabledSignal_ValueDoesntMatter(t *testing.T) {
 		})
 	}
 }
-

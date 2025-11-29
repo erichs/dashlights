@@ -10,7 +10,7 @@ import (
 func TestHistoryPermissionsSignal_NoHistoryFiles(t *testing.T) {
 	// Create a temporary directory with no history files
 	tmpDir := t.TempDir()
-	
+
 	// Temporarily change HOME to temp directory
 	originalHome := os.Getenv("HOME")
 	os.Setenv("HOME", tmpDir)
@@ -29,7 +29,7 @@ func TestHistoryPermissionsSignal_BashHistory600(t *testing.T) {
 	// Create a temporary directory with secure bash_history
 	tmpDir := t.TempDir()
 	histFile := filepath.Join(tmpDir, ".bash_history")
-	
+
 	// Create file with secure permissions (600)
 	err := os.WriteFile(histFile, []byte("echo hello\n"), 0600)
 	if err != nil {
@@ -54,7 +54,7 @@ func TestHistoryPermissionsSignal_ZshHistory600(t *testing.T) {
 	// Create a temporary directory with secure zsh_history
 	tmpDir := t.TempDir()
 	histFile := filepath.Join(tmpDir, ".zsh_history")
-	
+
 	// Create file with secure permissions (600)
 	err := os.WriteFile(histFile, []byte("echo hello\n"), 0600)
 	if err != nil {
@@ -79,7 +79,7 @@ func TestHistoryPermissionsSignal_BashHistory644(t *testing.T) {
 	// Create a temporary directory with world-readable bash_history
 	tmpDir := t.TempDir()
 	histFile := filepath.Join(tmpDir, ".bash_history")
-	
+
 	// Create file with insecure permissions (644 - world readable)
 	err := os.WriteFile(histFile, []byte("echo hello\n"), 0644)
 	if err != nil {
@@ -104,7 +104,7 @@ func TestHistoryPermissionsSignal_ZshHistory644(t *testing.T) {
 	// Create a temporary directory with world-readable zsh_history
 	tmpDir := t.TempDir()
 	histFile := filepath.Join(tmpDir, ".zsh_history")
-	
+
 	// Create file with insecure permissions (644 - world readable)
 	err := os.WriteFile(histFile, []byte("echo hello\n"), 0644)
 	if err != nil {
@@ -129,7 +129,7 @@ func TestHistoryPermissionsSignal_GroupReadable(t *testing.T) {
 	// Create a temporary directory with group-readable history
 	tmpDir := t.TempDir()
 	histFile := filepath.Join(tmpDir, ".bash_history")
-	
+
 	// Create file with group-readable permissions (640)
 	err := os.WriteFile(histFile, []byte("echo hello\n"), 0640)
 	if err != nil {
@@ -153,7 +153,7 @@ func TestHistoryPermissionsSignal_GroupReadable(t *testing.T) {
 func TestHistoryPermissionsSignal_MultipleFiles(t *testing.T) {
 	// Create a temporary directory with multiple history files
 	tmpDir := t.TempDir()
-	
+
 	// Create bash_history with secure permissions
 	bashHist := filepath.Join(tmpDir, ".bash_history")
 	err := os.WriteFile(bashHist, []byte("echo hello\n"), 0600)
@@ -181,4 +181,3 @@ func TestHistoryPermissionsSignal_MultipleFiles(t *testing.T) {
 		t.Error("Expected true when any history file has insecure permissions")
 	}
 }
-

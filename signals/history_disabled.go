@@ -37,10 +37,10 @@ func (s *HistoryDisabledSignal) Check(ctx context.Context) bool {
 		s.reason = "HISTFILE set to /dev/null (history disabled)"
 		return true
 	}
-	
+
 	// Note: We can't reliably detect if HISTFILE is unset vs empty string
 	// in Go's os.Getenv, so we check HISTCONTROL instead
-	
+
 	// Check if HISTCONTROL contains ignorespace or ignoreboth
 	histcontrol := os.Getenv("HISTCONTROL")
 	if histcontrol != "" {
@@ -49,7 +49,6 @@ func (s *HistoryDisabledSignal) Check(ctx context.Context) bool {
 			return true
 		}
 	}
-	
+
 	return false
 }
-

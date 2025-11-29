@@ -27,7 +27,7 @@ func TestDockerSocketSignal_NoDockerSocket(t *testing.T) {
 	// This test assumes /var/run/docker.sock doesn't exist or has proper permissions
 	// We can't easily test this without Docker installed
 	result := signal.Check(ctx)
-	
+
 	// Just verify it doesn't crash
 	_ = result
 }
@@ -112,7 +112,7 @@ func TestDockerSocketSignal_ValidDockerHost(t *testing.T) {
 	// Create a temporary socket file
 	tmpDir := t.TempDir()
 	socketPath := tmpDir + "/docker.sock"
-	
+
 	// Create the socket file (just a regular file for testing)
 	err := os.WriteFile(socketPath, []byte(""), 0600)
 	if err != nil {
@@ -163,4 +163,3 @@ func TestDockerSocketSignal_TCPDockerHost(t *testing.T) {
 	// May still check default socket permissions
 	_ = result
 }
-

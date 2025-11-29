@@ -46,4 +46,3 @@ func (s *DebugEnabledSignal) Check(ctx context.Context) bool {
 
 	return false
 }
-

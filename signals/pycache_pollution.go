@@ -93,4 +93,3 @@ func isTrackedByGit(path string) bool {
 
 	return false
 }
-

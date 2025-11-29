@@ -51,10 +51,10 @@ func TestAWSAliasHijackSignal_InsecurePermissions(t *testing.T) {
 
 func TestAWSAliasHijackSignal_CoreCommandHijack(t *testing.T) {
 	testCases := []struct {
-		name          string
-		aliasContent  string
-		shouldDetect  bool
-		description   string
+		name         string
+		aliasContent string
+		shouldDetect bool
+		description  string
 	}{
 		{
 			name:         "Safe alias",
@@ -179,4 +179,3 @@ func TestAWSAliasHijackSignal_AllCoreCommands(t *testing.T) {
 		})
 	}
 }
-

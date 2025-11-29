@@ -57,16 +57,16 @@ func (s *CargoPathDepsSignal) Check(ctx context.Context) bool {
 		}
 
 		// Track if we're in a dependencies section
-		if strings.HasPrefix(line, "[dependencies") || 
-		   strings.HasPrefix(line, "[dev-dependencies") ||
-		   strings.HasPrefix(line, "[build-dependencies") {
+		if strings.HasPrefix(line, "[dependencies") ||
+			strings.HasPrefix(line, "[dev-dependencies") ||
+			strings.HasPrefix(line, "[build-dependencies") {
 			inDependenciesSection = true
 			continue
 		}
 
 		// Exit dependencies section when we hit another section
 		if strings.HasPrefix(line, "[") && !strings.HasPrefix(line, "[dependencies") &&
-		   !strings.HasPrefix(line, "[dev-dependencies") && !strings.HasPrefix(line, "[build-dependencies") {
+			!strings.HasPrefix(line, "[dev-dependencies") && !strings.HasPrefix(line, "[build-dependencies") {
 			inDependenciesSection = false
 			continue
 		}
@@ -83,4 +83,3 @@ func (s *CargoPathDepsSignal) Check(ctx context.Context) bool {
 
 	return false
 }
-

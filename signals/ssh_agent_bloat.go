@@ -13,10 +13,10 @@ const (
 	// SSH Agent Protocol constants
 	msgRequestIdentities = 11
 	msgIdentitiesAnswer  = 12
-	
+
 	// Maximum safe number of keys before MaxAuthTries issues
 	maxSafeKeys = 5
-	
+
 	// Timeout for agent socket communication
 	socketTimeout = 10 * time.Millisecond
 )
@@ -103,7 +103,6 @@ func getAgentKeyCount(socketPath string) (uint32, error) {
 
 	// Parse as big-endian uint32
 	count := binary.BigEndian.Uint32(countBuf)
-	
+
 	return count, nil
 }
-

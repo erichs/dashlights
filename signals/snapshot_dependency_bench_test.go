@@ -163,4 +163,3 @@ func BenchmarkIsHeadOnTag(b *testing.B) {
 		isHeadOnTag(headSHA)
 	}
 }
-

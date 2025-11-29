@@ -35,7 +35,7 @@ func (s *ProxyActiveSignal) Remediation() string {
 
 func (s *ProxyActiveSignal) Check(ctx context.Context) bool {
 	s.foundProxies = []string{}
-	
+
 	proxyVars := []string{
 		"HTTP_PROXY",
 		"HTTPS_PROXY",
@@ -44,13 +44,12 @@ func (s *ProxyActiveSignal) Check(ctx context.Context) bool {
 		"https_proxy",
 		"all_proxy",
 	}
-	
+
 	for _, varName := range proxyVars {
 		if val := os.Getenv(varName); val != "" {
 			s.foundProxies = append(s.foundProxies, varName)
 		}
 	}
-	
+
 	return len(s.foundProxies) > 0
 }
-

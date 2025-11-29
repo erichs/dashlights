@@ -41,12 +41,12 @@ func (s *RootOwnedHomeSignal) Check(ctx context.Context) bool {
 	if runtime.GOOS == "windows" {
 		return false
 	}
-	
+
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return false
 	}
-	
+
 	// Check common config files
 	filesToCheck := []string{
 		".bashrc",
@@ -56,28 +56,27 @@ func (s *RootOwnedHomeSignal) Check(ctx context.Context) bool {
 		".config",
 		".ssh",
 	}
-	
+
 	s.foundFiles = []string{}
-	
+
 	for _, file := range filesToCheck {
 		fullPath := filepath.Join(homeDir, file)
 		info, err := os.Stat(fullPath)
 		if err != nil {
 			continue // File doesn't exist
 		}
-		
+
 		// Get file ownership
 		stat, ok := info.Sys().(*syscall.Stat_t)
 		if !ok {
 			continue
 		}
-		
+
 		// Check if owned by root (UID 0)
 		if stat.Uid == 0 {
 			s.foundFiles = append(s.foundFiles, file)
 		}
 	}
-	
+
 	return len(s.foundFiles) > 0
 }
-

@@ -41,7 +41,7 @@ func (s *LDPreloadSignal) Check(ctx context.Context) bool {
 			return true
 		}
 	}
-	
+
 	// Check DYLD_INSERT_LIBRARIES on macOS
 	if runtime.GOOS == "darwin" {
 		if val := os.Getenv("DYLD_INSERT_LIBRARIES"); val != "" {
@@ -50,7 +50,6 @@ func (s *LDPreloadSignal) Check(ctx context.Context) bool {
 			return true
 		}
 	}
-	
+
 	return false
 }
-

@@ -42,4 +42,3 @@ func (s *TerraformStateLocalSignal) Check(ctx context.Context) bool {
 
 	return false
 }
-

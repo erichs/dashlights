@@ -128,4 +128,3 @@ func TestEmojiAliasMapCompleteness(t *testing.T) {
 		t.Errorf("emojiAliasMap has %d entries; want %d", len(emojiAliasMap), len(requiredAliases))
 	}
 }
-
