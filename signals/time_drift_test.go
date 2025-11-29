@@ -177,3 +177,44 @@ func TestTimeDriftSignal_WithinTolerance(t *testing.T) {
 		t.Error("Expected false for normal filesystem operations within tolerance")
 	}
 }
+
+func TestTimeDriftSignal_FileCloseHandling(t *testing.T) {
+	// Test that the signal properly handles file close operations
+	// While it's difficult to force Close() to fail on a regular file,
+	// this test verifies that the normal path works correctly and
+	// that the error handling code path exists
+
+	tmpDir := t.TempDir()
+	originalDir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get current directory: %v", err)
+	}
+	defer os.Chdir(originalDir)
+
+	// Change to temp directory
+	err = os.Chdir(tmpDir)
+	if err != nil {
+		t.Fatalf("Failed to change to temp directory: %v", err)
+	}
+
+	signal := NewTimeDriftSignal()
+	ctx := context.Background()
+
+	// Should work normally (file close succeeds)
+	result := signal.Check(ctx)
+	if result {
+		t.Error("Expected false when file operations succeed normally")
+	}
+
+	// Verify no temp files are left behind
+	files, err := os.ReadDir(tmpDir)
+	if err != nil {
+		t.Fatalf("Failed to read directory: %v", err)
+	}
+
+	for _, file := range files {
+		if file.Name() != "." && file.Name() != ".." {
+			t.Errorf("Unexpected file left behind: %s", file.Name())
+		}
+	}
+}

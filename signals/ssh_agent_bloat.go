@@ -74,7 +74,9 @@ func getAgentKeyCount(socketPath string) (uint32, error) {
 	defer conn.Close()
 
 	// Set a tight deadline to avoid blocking
-	conn.SetDeadline(time.Now().Add(socketTimeout))
+	if err := conn.SetDeadline(time.Now().Add(socketTimeout)); err != nil {
+		return 0, err
+	}
 
 	// Send SSH_AGENTC_REQUEST_IDENTITIES message
 	// Format: [length:4 bytes][type:1 byte]
