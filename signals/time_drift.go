@@ -3,7 +3,6 @@ package signals
 import (
 	"context"
 	"os"
-	"path/filepath"
 	"time"
 )
 
@@ -32,18 +31,19 @@ func (s *TimeDriftSignal) Remediation() string {
 }
 
 func (s *TimeDriftSignal) Check(ctx context.Context) bool {
-	// Create a temporary file in the current directory
-	tmpFile := filepath.Join(".", ".dashlights_time_check")
-
+	// Create a temporary file with a unique name to avoid collisions when
+	// multiple instances run concurrently. We use CreateTemp with a pattern
+	// to ensure uniqueness while keeping the file in the current directory.
 	// Record system time before creating file
 	beforeTime := time.Now()
 
-	// Create the file
-	f, err := os.Create(tmpFile)
+	// Create a unique temporary file in the current directory
+	f, err := os.CreateTemp(".", ".dashlights_time_check_*")
 	if err != nil {
 		// If we can't create a temp file, we can't check - return false
 		return false
 	}
+	tmpFile := f.Name()
 	f.Close()
 
 	// Ensure cleanup

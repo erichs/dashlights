@@ -1,7 +1,13 @@
 package signals
 
-// GetAllSignals returns all security signal checks
-// Includes checks that complete in <10ms total when run concurrently
+// GetAllSignals returns all security signal checks.
+//
+// Thread-Safety: This function creates fresh Signal instances on each call,
+// ensuring that concurrent executions (e.g., multiple terminal prompts) do not
+// share mutable state. Each returned Signal instance is safe to use in a single
+// goroutine without additional synchronization.
+//
+// Performance: All checks complete in <10ms total when run concurrently via CheckAll().
 func GetAllSignals() []Signal {
 	return []Signal{
 		// IAM signals
@@ -31,7 +37,7 @@ func GetAllSignals() []Signal {
 		NewNpmrcTokensSignal(),         // File read
 		NewCargoPathDepsSignal(),       // File read
 		NewMissingInitPySignal(),       // Directory walk - checks for missing __init__.py
-		NewSnapshotDependencySignal(),  // Optimized .git file reads (was 4.5ms with shell, now ~34μs)
+		NewSnapshotDependencySignal(),  // Optimized .git file reads
 
 		// System health signals
 		NewDiskSpaceSignal(),        // Syscall

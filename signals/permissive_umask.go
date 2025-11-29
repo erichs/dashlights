@@ -3,7 +3,15 @@ package signals
 import (
 	"context"
 	"fmt"
+	"sync"
 	"syscall"
+)
+
+var (
+	// umaskMutex serializes umask checks to prevent race conditions.
+	// syscall.Umask() is a process-wide operation that temporarily modifies
+	// the umask, so concurrent calls would interfere with each other.
+	umaskMutex sync.Mutex
 )
 
 // PermissiveUmaskSignal checks for overly permissive umask
@@ -32,6 +40,12 @@ func (s *PermissiveUmaskSignal) Remediation() string {
 }
 
 func (s *PermissiveUmaskSignal) Check(ctx context.Context) bool {
+	// Serialize umask checks to prevent race conditions across concurrent goroutines.
+	// syscall.Umask() modifies process-wide state, so we must ensure only one
+	// goroutine accesses it at a time.
+	umaskMutex.Lock()
+	defer umaskMutex.Unlock()
+
 	// Get current umask (note: this temporarily changes it)
 	oldUmask := syscall.Umask(0)
 	syscall.Umask(oldUmask) // Restore immediately

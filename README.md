@@ -132,3 +132,14 @@ The tool uses concurrent goroutines to run all 18 security checks in parallel. E
 - **Fast checks (<5ms):** Environment variable scans, single syscalls, file reads
 - **Borderline checks (5-9ms):** File stat operations, git commands, directory scans
 - **Disabled checks (≥10ms):** External command execution (sudo), network calls (NTP)
+
+## Concurrency & Thread-Safety
+
+Dashlights is designed to be safe when multiple instances run concurrently (e.g., multiple terminal prompts rendering simultaneously):
+
+- **Fresh State:** Each execution creates fresh signal instances, preventing shared mutable state
+- **Process-Wide Operations:** Operations that modify process-wide state (e.g., umask checks) are serialized with mutexes
+- **Unique Resources:** Temporary files use unique names to prevent collisions between concurrent instances
+- **Tested:** Comprehensive concurrency tests verify thread-safety under high contention
+
+This design ensures that running dashlights in multiple terminal windows or tmux panes simultaneously will not cause race conditions or incorrect results.

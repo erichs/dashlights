@@ -1,7 +1,7 @@
 .PHONY: all help build test test-integration fmt fmt-check clean install hooks
 
 # Default target - format, build, and test
-all: fmt build test test-integration
+all: fmt build test test-integration test-race
 	@echo "✅ All checks passed!"
 
 help:
@@ -30,6 +30,10 @@ test:
 test-integration:
 	@echo "Running integration tests..."
 	@go test -tags=integration -v -run TestPerformanceThreshold
+
+test-race:
+	@echo "Running concurrency race tests..."
+	@go test -race ./...
 
 # Format all Go files
 fmt:
