@@ -26,11 +26,14 @@ help:
 	@echo "  make fmt-check         - Check if files need formatting (CI-friendly)"
 	@echo "  make clean             - Remove built binaries"
 	@echo "  make install           - Install dashlights to GOPATH/bin"
+	@echo "  make hooks             - Install Git hooks from scripts/hooks/"
 
 # Build the binary
 build:
+	@echo "Generating repository URL..."
+	@cd src && go generate
 	@echo "Building dashlights..."
-	@go build -o dashlights
+	@go build -o dashlights ./src
 
 # Run all tests
 test:
@@ -40,7 +43,7 @@ test:
 # Run integration tests (including performance)
 test-integration:
 	@echo "Running integration tests..."
-	@go test -tags=integration -v -run TestPerformanceThreshold
+	@go test -tags=integration -v -run TestPerformanceThreshold ./src
 
 test-race:
 	@echo "Running concurrency race tests..."
@@ -66,7 +69,7 @@ coverage:
 	@go tool cover -func=coverage.out | grep total | awk '{print "Total: " $$3}'
 	@echo ""
 	@echo "Signals package coverage:"
-	@go tool cover -func=coverage.out | grep signals/ | tail -1 | awk '{print $$1 ": " $$3}'
+	@go tool cover -func=coverage.out | grep src/signals/ | tail -1 | awk '{print $$1 ": " $$3}'
 
 # Generate HTML coverage report
 coverage-html: coverage
@@ -78,10 +81,10 @@ coverage-html: coverage
 # Show detailed coverage for signals package
 coverage-signals:
 	@echo "Running tests with coverage for signals package..."
-	@go test -coverprofile=coverage.out ./signals/
+	@go test -coverprofile=coverage.out ./src/signals/
 	@echo ""
 	@echo "Signals package coverage:"
-	@go tool cover -func=coverage.out | grep "signals/" | awk '{printf "%-60s %s\n", $$1 ":" $$2, $$3}'
+	@go tool cover -func=coverage.out | grep "src/signals/" | awk '{printf "%-60s %s\n", $$1 ":" $$2, $$3}'
 	@echo ""
 	@echo "Summary:"
 	@go tool cover -func=coverage.out | grep total | awk '{print "Total coverage: " $$3}'
@@ -109,4 +112,15 @@ install:
 	@echo "Installing dashlights..."
 	@go install
 	@echo "✅ Installed to $$(go env GOPATH)/bin/dashlights"
+
+# Install Git hooks
+hooks:
+	@echo "Installing Git hooks..."
+	@cp scripts/hooks/pre-commit .git/hooks/pre-commit
+	@chmod +x .git/hooks/pre-commit
+	@echo "  ✓ Installed pre-commit hook"
+	@cp scripts/hooks/pre-push .git/hooks/pre-push
+	@chmod +x .git/hooks/pre-push
+	@echo "  ✓ Installed pre-push hook"
+	@echo "✅ Git hooks installed successfully"
 

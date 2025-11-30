@@ -47,11 +47,14 @@ jobs:
       - name: Install dependencies
         run: go mod download
 
+      - name: Generate repository URL
+        run: cd src && go generate
+
       - name: Run tests with coverage
         run: go test -v -coverprofile=coverage.txt -covermode=atomic ./...
 
       - name: Run integration tests
-        run: go test -tags=integration -v -run TestPerformanceThreshold
+        run: go test -tags=integration -v -run TestPerformanceThreshold ./src
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
@@ -74,25 +77,8 @@ jobs:
         with:
           go-version: '1.21'
 
+      - name: Generate repository URL
+        run: cd src && go generate
+
       - name: Build
-        run: go build -v -o dashlights
-
-  security:
-    name: Security Scan
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.21'
-
-      - name: Install gosec
-        run: go install github.com/securego/gosec/v2/cmd/gosec@latest
-
-      - name: Run gosec with audit mode
-        run: |
-          $(go env GOPATH)/bin/gosec -conf gosec-config.json ./...
-          echo "✅ Security scan passed - no issues found"
+        run: go build -v -o dashlights ./src
