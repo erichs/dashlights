@@ -131,6 +131,31 @@ func TestDefaultFlagStates(t *testing.T) {
 	}
 }
 
+func TestVersion(t *testing.T) {
+	// Test that Version() method exists and returns expected format
+	versionStr := args.Version()
+
+	// Should contain "dashlights"
+	if !strings.Contains(versionStr, "dashlights") {
+		t.Errorf("Version string should contain 'dashlights', got: %s", versionStr)
+	}
+
+	// Should contain version info (even if it's "dev")
+	if !strings.Contains(versionStr, version) {
+		t.Errorf("Version string should contain version '%s', got: %s", version, versionStr)
+	}
+
+	// Should contain commit info
+	if !strings.Contains(versionStr, "commit:") {
+		t.Errorf("Version string should contain 'commit:', got: %s", versionStr)
+	}
+
+	// Should contain build date info
+	if !strings.Contains(versionStr, "built:") {
+		t.Errorf("Version string should contain 'built:', got: %s", versionStr)
+	}
+}
+
 func TestListColorModeDisplay(t *testing.T) {
 	args.ListMode = true
 	defer func() { args.ListMode = false }()

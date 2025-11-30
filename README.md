@@ -166,21 +166,58 @@ PROMPT='$(dashlights) '"$PROMPT"
 
 ### Powerlevel10k
 
-If you use Powerlevel10k, you can add dashlights as a custom segment. Add to your `~/.zshrc`:
+If you use Powerlevel10k, add dashlights as a custom prompt segment by editing your `~/.p10k.zsh` configuration file.
+
+#### Step 1: Define the custom segment function
+
+Add this function anywhere in your `~/.p10k.zsh` file (recommended: after the initial comments, before the main configuration block):
 
 ```bash
-# Add before sourcing powerlevel10k
-POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(dashlights_custom $POWERLEVEL9K_LEFT_PROMPT_ELEMENTS)
-POWERLEVEL9K_CUSTOM_DASHLIGHTS="dashlights"
-POWERLEVEL9K_CUSTOM_DASHLIGHTS_BACKGROUND="none"
-POWERLEVEL9K_CUSTOM_DASHLIGHTS_FOREGROUND="red"
+function prompt_dashlights() {
+  # Run dashlights and capture output
+  local content=$(dashlights 2>/dev/null)
+
+  # Only render the segment if dashlights returned output
+  if [[ -n $content ]]; then
+    p10k segment -t "$content"
+  fi
+}
 ```
 
-Or add to your right prompt:
+#### Step 2: Add to your prompt elements
+
+Find the `POWERLEVEL9K_LEFT_PROMPT_ELEMENTS` array in your `~/.p10k.zsh` and add `dashlights` to it:
 
 ```bash
-POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=($POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS dashlights_custom)
+typeset -g POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(
+  # =========================[ Line #1 ]=========================
+  dir                       # current directory
+  vcs                       # git status
+  # =========================[ Line #2 ]=========================
+  newline                   # \n
+  dashlights                # <-- Add this line
+  prompt_char               # prompt symbol
+)
 ```
+
+**Alternative**: Add to right prompt or second line:
+
+```bash
+typeset -g POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=(
+  # =========================[ Line #1 ]=========================
+  command_execution_time    # previous command duration
+  dashlights                # <-- Add here for right prompt
+  time                      # current time
+)
+```
+
+#### Step 3: Reload your configuration
+
+```bash
+source ~/.zshrc
+```
+
+**Note**: This approach keeps your `~/.zshrc` clean and follows Powerlevel10k best practices by keeping all prompt configuration in `~/.p10k.zsh`. The segment will only appear when dashlights detects security issues or custom dashboard lights.
 
 ### Fish
 
@@ -270,13 +307,15 @@ WRENCH               1F527      🔧
 ### Command Line Options
 
 ```
-Usage: dashlights [--obd] [--list] [--clear]
+Usage: dashlights [--obd] [--verbose] [--list] [--clear]
 
 Options:
   --obd, -d              On-Board Diagnostics: display detailed security diagnostics
+  --verbose, -v          Verbose mode: show documentation links in diagnostic output
   --list, -l             List custom dashboard lights
   --clear, -c            Shell code to clear set dashlights
   --help, -h             Display this help and exit
+  --version              Display version and exit
 ```
 
 ### Advanced: Custom Dashboard Lights
