@@ -134,12 +134,26 @@ func signalTypeToFilename(sig signals.Signal) string {
 	name := matches[1]
 
 	// Convert from PascalCase to snake_case
-	// Insert underscore before uppercase letters (except the first one)
+	// Handle consecutive uppercase letters (e.g., "AWS" -> "aws", not "a_w_s")
 	var result strings.Builder
-	for i, r := range name {
+	runes := []rune(name)
+
+	for i := 0; i < len(runes); i++ {
+		r := runes[i]
+
+		// Add underscore before uppercase letter if:
+		// 1. Not the first character
+		// 2. Previous character is lowercase OR
+		// 3. Next character is lowercase (end of acronym)
 		if i > 0 && r >= 'A' && r <= 'Z' {
-			result.WriteRune('_')
+			prevIsLower := runes[i-1] >= 'a' && runes[i-1] <= 'z'
+			nextIsLower := i+1 < len(runes) && runes[i+1] >= 'a' && runes[i+1] <= 'z'
+
+			if prevIsLower || nextIsLower {
+				result.WriteRune('_')
+			}
 		}
+
 		result.WriteRune(r)
 	}
 

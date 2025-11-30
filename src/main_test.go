@@ -262,3 +262,192 @@ func TestEmojiAliasInParsing(t *testing.T) {
 		t.Errorf("Expected Glyph '🔗', got '%s'", lights[0].Glyph)
 	}
 }
+
+func TestSignalTypeToFilename(t *testing.T) {
+	tests := []struct {
+		name     string
+		signal   signals.Signal
+		expected string
+	}{
+		{
+			name:     "AWS Alias Hijack Signal",
+			signal:   signals.NewAWSAliasHijackSignal(),
+			expected: "aws_alias_hijack",
+		},
+		{
+			name:     "Debug Enabled Signal",
+			signal:   signals.NewDebugEnabledSignal(),
+			expected: "debug_enabled",
+		},
+		{
+			name:     "Docker Socket Signal",
+			signal:   signals.NewDockerSocketSignal(),
+			expected: "docker_socket",
+		},
+		{
+			name:     "History Permissions Signal",
+			signal:   signals.NewHistoryPermissionsSignal(),
+			expected: "history_permissions",
+		},
+		{
+			name:     "Naked Credentials Signal",
+			signal:   signals.NewNakedCredentialsSignal(),
+			expected: "naked_credentials",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := signalTypeToFilename(tt.signal)
+			if result != tt.expected {
+				t.Errorf("signalTypeToFilename() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestDisplaySignalDiagnosticsNoIssues(t *testing.T) {
+	var b bytes.Buffer
+	results := []signals.Result{}
+
+	displaySignalDiagnostics(&b, results)
+
+	expected := "✅ No security issues detected"
+	if !strings.Contains(b.String(), expected) {
+		t.Errorf("Expected to see '%s' in:\n%s", expected, b.String())
+	}
+}
+
+func TestDisplaySignalDiagnosticsWithIssues(t *testing.T) {
+	var b bytes.Buffer
+
+	// Create a mock signal result
+	sig := signals.NewDockerSocketSignal()
+	results := []signals.Result{
+		{Signal: sig, Detected: true},
+	}
+
+	// Test non-verbose mode
+	args.VerboseMode = false
+	displaySignalDiagnostics(&b, results)
+
+	// Should contain the diagnostic message
+	if !strings.Contains(b.String(), "Security Issues Detected:") {
+		t.Errorf("Expected to see 'Security Issues Detected:' in:\n%s", b.String())
+	}
+
+	// Should contain the breadcrumb in non-verbose mode
+	if !strings.Contains(b.String(), "Use -v flag for detailed documentation links") {
+		t.Errorf("Expected to see breadcrumb message in:\n%s", b.String())
+	}
+
+	// Should NOT contain documentation link in non-verbose mode
+	if strings.Contains(b.String(), "Documentation:") {
+		t.Errorf("Should not see documentation link in non-verbose mode:\n%s", b.String())
+	}
+}
+
+func TestDisplaySignalDiagnosticsVerboseMode(t *testing.T) {
+	var b bytes.Buffer
+
+	// Create a mock signal result
+	sig := signals.NewDockerSocketSignal()
+	results := []signals.Result{
+		{Signal: sig, Detected: true},
+	}
+
+	// Test verbose mode
+	args.VerboseMode = true
+	defer func() { args.VerboseMode = false }()
+
+	displaySignalDiagnostics(&b, results)
+
+	// Should contain the diagnostic message
+	if !strings.Contains(b.String(), "Security Issues Detected:") {
+		t.Errorf("Expected to see 'Security Issues Detected:' in:\n%s", b.String())
+	}
+
+	// Should contain documentation link in verbose mode
+	if !strings.Contains(b.String(), "📖 Documentation:") {
+		t.Errorf("Expected to see documentation link in:\n%s", b.String())
+	}
+
+	// Should contain the correct documentation URL
+	if !strings.Contains(b.String(), "docs/signals/docker_socket.md") {
+		t.Errorf("Expected to see correct documentation URL in:\n%s", b.String())
+	}
+
+	// Should NOT contain breadcrumb in verbose mode
+	if strings.Contains(b.String(), "Use -v flag") {
+		t.Errorf("Should not see breadcrumb message in verbose mode:\n%s", b.String())
+	}
+}
+
+func TestDisplaySecurityStatusNoIssues(t *testing.T) {
+	var b bytes.Buffer
+	results := []signals.Result{}
+	lights := make([]dashlight, 0)
+
+	displaySecurityStatus(&b, results, &lights)
+
+	// Should only have a newline, no siren
+	if strings.Contains(b.String(), "🚨") {
+		t.Errorf("Should not show siren when no issues detected:\n%s", b.String())
+	}
+}
+
+func TestDisplaySecurityStatusWithIssues(t *testing.T) {
+	var b bytes.Buffer
+
+	sig := signals.NewDockerSocketSignal()
+	results := []signals.Result{
+		{Signal: sig, Detected: true},
+	}
+	lights := make([]dashlight, 0)
+
+	displaySecurityStatus(&b, results, &lights)
+
+	// Should show siren with count
+	if !strings.Contains(b.String(), "🚨 1") {
+		t.Errorf("Expected to see '🚨 1' in:\n%s", b.String())
+	}
+}
+
+func TestDisplaySecurityStatusWithIssuesAndLights(t *testing.T) {
+	var b bytes.Buffer
+
+	sig := signals.NewDockerSocketSignal()
+	results := []signals.Result{
+		{Signal: sig, Detected: true},
+	}
+	lights := make([]dashlight, 0)
+	parseDashlightFromEnv(&lights, "DASHLIGHT_TEST_0021=test")
+
+	displaySecurityStatus(&b, results, &lights)
+
+	// Should show siren with count and dashlight
+	if !strings.Contains(b.String(), "🚨 1") {
+		t.Errorf("Expected to see '🚨 1' in:\n%s", b.String())
+	}
+	if !strings.Contains(b.String(), "!") {
+		t.Errorf("Expected to see dashlight glyph in:\n%s", b.String())
+	}
+}
+
+func TestDisplaySecurityStatusOnlyLights(t *testing.T) {
+	var b bytes.Buffer
+
+	results := []signals.Result{}
+	lights := make([]dashlight, 0)
+	parseDashlightFromEnv(&lights, "DASHLIGHT_TEST_0021=test")
+
+	displaySecurityStatus(&b, results, &lights)
+
+	// Should show only dashlight, no siren
+	if strings.Contains(b.String(), "🚨") {
+		t.Errorf("Should not show siren when no security issues:\n%s", b.String())
+	}
+	if !strings.Contains(b.String(), "!") {
+		t.Errorf("Expected to see dashlight glyph in:\n%s", b.String())
+	}
+}
