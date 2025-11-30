@@ -28,6 +28,9 @@ jobs:
         with:
           go-version: '1.21'
 
+      - name: Generate repository URL
+        run: cd src && go generate
+
       - name: Run Gosec Security Scanner
         uses: securego/gosec@master
         with:
