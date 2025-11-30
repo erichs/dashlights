@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/erichs/dashlights/signals"
+	"github.com/erichs/dashlights/src/signals"
 	"github.com/fatih/color"
 )
 

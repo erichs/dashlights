@@ -11,7 +11,8 @@ before:
     - go test ./...
 
 builds:
-  - env:
+  - main: ./src
+    env:
       - CGO_ENABLED=0
     goos:
       - linux
