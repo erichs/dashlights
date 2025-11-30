@@ -270,13 +270,15 @@ WRENCH               1F527      🔧
 ### Command Line Options
 
 ```
-Usage: dashlights [--obd] [--list] [--clear]
+Usage: dashlights [--obd] [--verbose] [--list] [--clear]
 
 Options:
   --obd, -d              On-Board Diagnostics: display detailed security diagnostics
+  --verbose, -v          Verbose mode: show documentation links in diagnostic output
   --list, -l             List custom dashboard lights
   --clear, -c            Shell code to clear set dashlights
   --help, -h             Display this help and exit
+  --version              Display version and exit
 ```
 
 ### Advanced: Custom Dashboard Lights

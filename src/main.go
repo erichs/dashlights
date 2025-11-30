@@ -18,6 +18,13 @@ import (
 	"github.com/fatih/color"
 )
 
+// Version information (set by GoReleaser via ldflags)
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
+
 type dashlight struct {
 	Name        string
 	Glyph       string
@@ -26,12 +33,19 @@ type dashlight struct {
 	UnsetString string
 }
 
-var args struct {
+type cliArgs struct {
 	ObdMode     bool `arg:"-d,--obd,help:On-Board Diagnostics: display diagnostic info if provided."`
 	VerboseMode bool `arg:"-v,--verbose,help:Verbose mode: show documentation links in diagnostic output."`
 	ListMode    bool `arg:"-l,--list,help:List supported color attributes and emoji aliases."`
 	ClearMode   bool `arg:"-c,--clear,help:Shell code to clear set dashlights."`
 }
+
+// Version returns the version string for --version flag
+func (cliArgs) Version() string {
+	return fmt.Sprintf("dashlights %s (commit: %s, built: %s)", version, commit, date)
+}
+
+var args cliArgs
 
 func flexPrintf(w io.Writer, format string, args ...interface{}) {
 	fmt.Fprintf(w, format, args...)
