@@ -26,9 +26,12 @@ help:
 	@echo "  make fmt-check         - Check if files need formatting (CI-friendly)"
 	@echo "  make clean             - Remove built binaries"
 	@echo "  make install           - Install dashlights to GOPATH/bin"
+	@echo "  make hooks             - Install Git hooks from scripts/hooks/"
 
 # Build the binary
 build:
+	@echo "Generating repository URL..."
+	@cd src && go generate
 	@echo "Building dashlights..."
 	@go build -o dashlights ./src
 
@@ -109,4 +112,15 @@ install:
 	@echo "Installing dashlights..."
 	@go install
 	@echo "✅ Installed to $$(go env GOPATH)/bin/dashlights"
+
+# Install Git hooks
+hooks:
+	@echo "Installing Git hooks..."
+	@cp scripts/hooks/pre-commit .git/hooks/pre-commit
+	@chmod +x .git/hooks/pre-commit
+	@echo "  ✓ Installed pre-commit hook"
+	@cp scripts/hooks/pre-push .git/hooks/pre-push
+	@chmod +x .git/hooks/pre-push
+	@echo "  ✓ Installed pre-push hook"
+	@echo "✅ Git hooks installed successfully"
 

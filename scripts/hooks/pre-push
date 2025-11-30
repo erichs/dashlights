@@ -1,0 +1,49 @@
+#!/bin/bash
+# Pre-push hook to validate that all signals have corresponding documentation
+
+set -e
+
+echo "Validating signal documentation..."
+
+# Get the repository root
+REPO_ROOT=$(git rev-parse --show-toplevel)
+
+# Find all signal implementation files (excluding test files, signal.go, and registry.go)
+SIGNAL_FILES=$(find "$REPO_ROOT/src/signals" -name "*.go" \
+  ! -name "*_test.go" \
+  ! -name "signal.go" \
+  ! -name "registry.go" \
+  -type f | sort)
+
+# Track missing documentation
+MISSING_DOCS=()
+
+# Check each signal file for corresponding documentation
+for signal_file in $SIGNAL_FILES; do
+  # Get the base filename without extension
+  base_name=$(basename "$signal_file" .go)
+  
+  # Expected documentation file path
+  doc_file="$REPO_ROOT/docs/signals/${base_name}.md"
+  
+  # Check if documentation exists
+  if [ ! -f "$doc_file" ]; then
+    MISSING_DOCS+=("$base_name")
+  fi
+done
+
+# Report results
+if [ ${#MISSING_DOCS[@]} -eq 0 ]; then
+  echo "✓ All signals have documentation"
+  exit 0
+else
+  echo "✗ Error: Missing documentation for the following signals:"
+  for signal in "${MISSING_DOCS[@]}"; do
+    echo "  - $signal (expected: docs/signals/${signal}.md)"
+  done
+  echo ""
+  echo "Please create documentation for all signals before pushing."
+  echo "Each signal in src/signals/ must have a corresponding .md file in docs/signals/"
+  exit 1
+fi
+
