@@ -1,10 +1,14 @@
 package main
 
+//go:generate go run gen_repo_url.go
+
 import (
 	"context"
 	"fmt"
 	"io"
 	"os"
+	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -23,9 +27,10 @@ type dashlight struct {
 }
 
 var args struct {
-	ObdMode   bool `arg:"-d,--obd,help:On-Board Diagnostics: display diagnostic info if provided."`
-	ListMode  bool `arg:"-l,--list,help:List supported color attributes and emoji aliases."`
-	ClearMode bool `arg:"-c,--clear,help:Shell code to clear set dashlights."`
+	ObdMode     bool `arg:"-d,--obd,help:On-Board Diagnostics: display diagnostic info if provided."`
+	VerboseMode bool `arg:"-v,--verbose,help:Verbose mode: show documentation links in diagnostic output."`
+	ListMode    bool `arg:"-l,--list,help:List supported color attributes and emoji aliases."`
+	ClearMode   bool `arg:"-c,--clear,help:Shell code to clear set dashlights."`
 }
 
 func flexPrintf(w io.Writer, format string, args ...interface{}) {
@@ -112,6 +117,35 @@ func displaySecurityStatus(w io.Writer, results []signals.Result, lights *[]dash
 	flexPrintln(w, "")
 }
 
+// signalTypeToFilename converts a signal type name to its documentation filename
+// Example: "*signals.AWSAliasHijackSignal" -> "aws_alias_hijack"
+func signalTypeToFilename(sig signals.Signal) string {
+	// Get the type name using reflection
+	typeName := reflect.TypeOf(sig).String()
+
+	// Remove package prefix and pointer indicator
+	// Example: "*signals.AWSAliasHijackSignal" -> "AWSAliasHijackSignal"
+	re := regexp.MustCompile(`\*?signals\.(.+)Signal`)
+	matches := re.FindStringSubmatch(typeName)
+	if len(matches) < 2 {
+		return ""
+	}
+
+	name := matches[1]
+
+	// Convert from PascalCase to snake_case
+	// Insert underscore before uppercase letters (except the first one)
+	var result strings.Builder
+	for i, r := range name {
+		if i > 0 && r >= 'A' && r <= 'Z' {
+			result.WriteRune('_')
+		}
+		result.WriteRune(r)
+	}
+
+	return strings.ToLower(result.String())
+}
+
 // displaySignalDiagnostics shows detailed diagnostic information for detected signals
 func displaySignalDiagnostics(w io.Writer, results []signals.Result) {
 	detected := signals.GetDetected(results)
@@ -128,7 +162,22 @@ func displaySignalDiagnostics(w io.Writer, results []signals.Result) {
 		sig := result.Signal
 		flexPrintf(w, "%s %s\n", sig.Emoji(), sig.Diagnostic())
 		flexPrintf(w, "   → Fix: %s\n", sig.Remediation())
+
+		// Show documentation link in verbose mode
+		if args.VerboseMode {
+			filename := signalTypeToFilename(sig)
+			if filename != "" {
+				docURL := fmt.Sprintf("%s/blob/main/docs/signals/%s.md", RepositoryURL, filename)
+				flexPrintf(w, "   📖 Documentation: %s\n", docURL)
+			}
+		}
+
 		flexPrintln(w, "")
+	}
+
+	// Show breadcrumb footer in non-verbose mode
+	if !args.VerboseMode {
+		flexPrintln(w, "💡 Tip: Use -v flag for detailed documentation links")
 	}
 }
 
