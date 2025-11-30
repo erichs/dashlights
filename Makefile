@@ -30,7 +30,7 @@ help:
 # Build the binary
 build:
 	@echo "Building dashlights..."
-	@go build -o dashlights
+	@go build -o dashlights ./src
 
 # Run all tests
 test:
@@ -40,7 +40,7 @@ test:
 # Run integration tests (including performance)
 test-integration:
 	@echo "Running integration tests..."
-	@go test -tags=integration -v -run TestPerformanceThreshold
+	@go test -tags=integration -v -run TestPerformanceThreshold ./src
 
 test-race:
 	@echo "Running concurrency race tests..."
@@ -66,7 +66,7 @@ coverage:
 	@go tool cover -func=coverage.out | grep total | awk '{print "Total: " $$3}'
 	@echo ""
 	@echo "Signals package coverage:"
-	@go tool cover -func=coverage.out | grep signals/ | tail -1 | awk '{print $$1 ": " $$3}'
+	@go tool cover -func=coverage.out | grep src/signals/ | tail -1 | awk '{print $$1 ": " $$3}'
 
 # Generate HTML coverage report
 coverage-html: coverage
@@ -78,10 +78,10 @@ coverage-html: coverage
 # Show detailed coverage for signals package
 coverage-signals:
 	@echo "Running tests with coverage for signals package..."
-	@go test -coverprofile=coverage.out ./signals/
+	@go test -coverprofile=coverage.out ./src/signals/
 	@echo ""
 	@echo "Signals package coverage:"
-	@go tool cover -func=coverage.out | grep "signals/" | awk '{printf "%-60s %s\n", $$1 ":" $$2, $$3}'
+	@go tool cover -func=coverage.out | grep "src/signals/" | awk '{printf "%-60s %s\n", $$1 ":" $$2, $$3}'
 	@echo ""
 	@echo "Summary:"
 	@go tool cover -func=coverage.out | grep total | awk '{print "Total coverage: " $$3}'

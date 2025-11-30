@@ -10,7 +10,7 @@ import (
 	"time"
 
 	arg "github.com/alexflint/go-arg"
-	"github.com/erichs/dashlights/signals"
+	"github.com/erichs/dashlights/src/signals"
 	"github.com/fatih/color"
 )
 
