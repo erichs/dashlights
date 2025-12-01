@@ -1,4 +1,4 @@
-.PHONY: all help build test test-integration fmt fmt-check clean install hooks coverage coverage-html coverage-signals gosec
+.PHONY: all help build test test-integration fmt fmt-check clean install hooks coverage coverage-html coverage-signals gosec install-fabric-pattern release
 
 # Detect Go bin directory portably
 GOBIN := $(shell go env GOBIN)
@@ -27,6 +27,8 @@ help:
 	@echo "  make clean             - Remove built binaries"
 	@echo "  make install           - Install dashlights to GOPATH/bin"
 	@echo "  make hooks             - Install Git hooks from scripts/hooks/"
+	@echo "  make install-fabric-pattern - Install Fabric pattern for changelog generation"
+	@echo "  make release           - Create a new release with AI-generated changelog"
 
 # Build the binary
 build:
@@ -123,4 +125,20 @@ hooks:
 	@chmod +x .git/hooks/pre-push
 	@echo "  ✓ Installed pre-push hook"
 	@echo "✅ Git hooks installed successfully"
+
+# Install Fabric pattern for changelog generation
+install-fabric-pattern:
+	@echo "Installing Fabric pattern for changelog generation..."
+	@if ! command -v fabric >/dev/null 2>&1; then \
+		echo "❌ Error: fabric CLI not found"; \
+		echo "Install it from: https://github.com/danielmiessler/fabric"; \
+		exit 1; \
+	fi
+	@mkdir -p ~/.config/fabric/patterns/create_git_changelog
+	@cp scripts/fabric-patterns/create_git_changelog/system.md ~/.config/fabric/patterns/create_git_changelog/
+	@echo "✅ Fabric pattern installed to ~/.config/fabric/patterns/create_git_changelog/"
+
+# Create a new release with AI-generated changelog
+release:
+	@bash scripts/release.sh
 
