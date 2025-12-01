@@ -8,6 +8,21 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+# Check that we're not on main branch (releases must be created from feature branches)
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+if [ "$CURRENT_BRANCH" = "main" ] || [ "$CURRENT_BRANCH" = "master" ]; then
+    echo -e "${RED}❌ Error: Cannot create releases from the ${CURRENT_BRANCH} branch${NC}"
+    echo "Releases must be created from a feature branch and merged via PR."
+    echo ""
+    echo "Workflow:"
+    echo "  1. Create a feature branch: git checkout -b release-prep"
+    echo "  2. Run: make release"
+    echo "  3. Push the branch and tag: git push origin ${CURRENT_BRANCH} --tags"
+    echo "  4. Create a PR and merge to main"
+    echo "  5. The release workflow will trigger automatically after merge"
+    exit 1
+fi
+
 # Check if fabric is installed
 if ! command -v fabric >/dev/null 2>&1; then
     echo -e "${RED}❌ Error: fabric CLI not found${NC}"
@@ -139,8 +154,7 @@ echo -e "${GREEN}✅ Release ${NEW_TAG} created successfully!${NC}"
 echo ""
 echo -e "${BLUE}Next steps:${NC}"
 echo -e "  1. Review the changes: ${YELLOW}git show ${NEW_TAG}${NC}"
-echo -e "  2. Push the commit: ${YELLOW}git push origin main${NC}"
-echo -e "  3. Push the tag: ${YELLOW}git push origin ${NEW_TAG}${NC}"
-echo ""
-echo -e "${YELLOW}Or push both at once: git push origin main --tags${NC}"
+echo -e "  2. Push branch and tag: ${YELLOW}git push origin ${CURRENT_BRANCH} --tags${NC}"
+echo -e "  3. Create a PR to merge ${CURRENT_BRANCH} into main"
+echo -e "  4. Merge the PR - the release workflow will trigger automatically"
 
