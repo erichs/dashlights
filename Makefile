@@ -1,4 +1,4 @@
-.PHONY: all help build test test-integration fmt fmt-check clean install hooks coverage coverage-html coverage-signals gosec install-fabric-pattern release
+.PHONY: all help build build-all test test-integration fmt fmt-check clean install hooks coverage coverage-html coverage-signals gosec install-fabric-pattern release
 
 # Detect Go bin directory portably
 GOBIN := $(shell go env GOBIN)
@@ -7,7 +7,7 @@ ifeq ($(GOBIN),)
 endif
 
 # Default target - format, build, test, and security scan
-all: fmt build test test-integration test-race gosec
+all: fmt build build-all test test-integration test-race gosec
 	@echo "✅ All checks passed!"
 
 help:
@@ -15,6 +15,7 @@ help:
 	@echo "  make                   - Format, build, test, and security scan (default)"
 	@echo "  make all               - Same as default"
 	@echo "  make build             - Build the dashlights binary"
+	@echo "  make build-all         - Build binaries for all release platforms to dist/"
 	@echo "  make test              - Run all tests"
 	@echo "  make test-integration  - Run integration tests (including performance)"
 	@echo "  make test-race         - Run tests with race detector"
@@ -36,6 +37,27 @@ build:
 	@cd src && go generate
 	@echo "Building dashlights..."
 	@go build -o dashlights ./src
+
+# Build binaries for all release platforms
+build-all:
+	@echo "Generating repository URL..."
+	@cd src && go generate
+	@echo "Building binaries for all release platforms..."
+	@mkdir -p dist
+	@echo "  Building linux/amd64..."
+	@CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o dist/dashlights-linux-amd64 ./src
+	@echo "  Building linux/arm64..."
+	@CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o dist/dashlights-linux-arm64 ./src
+	@echo "  Building linux/arm (v6)..."
+	@CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=6 go build -o dist/dashlights-linux-armv6 ./src
+	@echo "  Building linux/arm (v7)..."
+	@CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=7 go build -o dist/dashlights-linux-armv7 ./src
+	@echo "  Building darwin/amd64..."
+	@CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -o dist/dashlights-darwin-amd64 ./src
+	@echo "  Building darwin/arm64..."
+	@CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -o dist/dashlights-darwin-arm64 ./src
+	@echo "✅ Built 7 binaries in dist/"
+	@ls -lh dist/
 
 # Run all tests
 test:
@@ -107,6 +129,7 @@ fmt-check:
 clean:
 	@echo "Cleaning..."
 	@rm -f dashlights coverage.out coverage.html
+	@rm -rf dist/
 	@echo "✅ Clean complete"
 
 # Install to GOPATH/bin
