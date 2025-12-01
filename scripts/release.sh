@@ -35,12 +35,14 @@ echo -e "${BLUE}Latest tag: ${LATEST_TAG}${NC}"
 
 # Prompt for new version
 echo ""
-echo -e "${YELLOW}Enter new version (semver format, e.g., 0.4.0):${NC}"
+echo -e "${YELLOW}Enter new version (semver format, e.g., 0.4.0 or 1.0.0-alpha):${NC}"
 read -r NEW_VERSION
 
-# Validate semver format (basic check)
-if ! [[ "$NEW_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-    echo -e "${RED}❌ Error: Invalid semver format. Use X.Y.Z (e.g., 0.4.0)${NC}"
+# Validate semver format (supports pre-release versions)
+# Format: X.Y.Z or X.Y.Z-prerelease (where prerelease can contain alphanumeric and hyphens)
+if ! [[ "$NEW_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$ ]]; then
+    echo -e "${RED}❌ Error: Invalid semver format.${NC}"
+    echo -e "${RED}   Use X.Y.Z (e.g., 0.4.0) or X.Y.Z-prerelease (e.g., 1.0.0-alpha, 1.0.0-pre-release)${NC}"
     exit 1
 fi
 
