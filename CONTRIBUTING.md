@@ -336,6 +336,146 @@ Provide broader security guidance:
 
 See `src/signals/docker_socket.go` and `docs/signals/docker_socket.md` for a complete example.
 
+## Performance Requirements
+
+Dashlights is designed to run in shell prompts, which requires **extremely fast execution**. All signals must complete within **10 milliseconds** when run concurrently.
+
+### Critical Performance Rule: Respect Context Cancellation
+
+**All signals MUST respect the context timeout**. The `Check()` method receives a `context.Context` with a 10ms timeout. Your signal must check for cancellation in any loop or long-running operation.
+
+#### ✅ Correct: Respecting Context Cancellation
+
+```go
+func (s *MySignal) Check(ctx context.Context) bool {
+    entries, err := os.ReadDir("/some/directory")
+    if err != nil {
+        return false
+    }
+
+    for _, entry := range entries {
+        // Check if context is cancelled
+        select {
+        case <-ctx.Done():
+            return false  // Exit immediately
+        default:
+        }
+
+        // Process entry...
+        if someCondition(entry) {
+            return true
+        }
+    }
+
+    return false
+}
+```
+
+#### ✅ Correct: Context-Aware Sleep/Delay
+
+```go
+func (s *MySignal) Check(ctx context.Context) bool {
+    // Use select with time.After() instead of time.Sleep()
+    select {
+    case <-time.After(100 * time.Millisecond):
+        // Delay completed
+    case <-ctx.Done():
+        // Context cancelled, return early
+        return false
+    }
+
+    // Continue with check...
+    return checkSomething()
+}
+```
+
+#### ❌ Incorrect: Ignoring Context
+
+```go
+func (s *MySignal) Check(ctx context.Context) bool {
+    // BAD: This loop could run for seconds on large directories
+    filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
+        // No context check - will block until complete!
+        processFile(path)
+        return nil
+    })
+    return false
+}
+```
+
+#### ❌ Incorrect: Using time.Sleep()
+
+```go
+func (s *MySignal) Check(ctx context.Context) bool {
+    // BAD: time.Sleep() does NOT respect context cancellation
+    time.Sleep(1 * time.Second)  // Will always sleep for 1 second!
+    return checkSomething()
+}
+```
+
+### Performance Testing
+
+All signals with potentially expensive operations (file I/O, directory traversal, network calls) must include context cancellation tests:
+
+```go
+func TestMySignal_ContextCancellation(t *testing.T) {
+    if testing.Short() {
+        t.Skip("Skipping context cancellation test in short mode")
+    }
+
+    // Create pathological test case (e.g., deep directory tree)
+    setupExpensiveScenario(t)
+
+    signal := NewMySignal()
+
+    // Create a context with very short timeout
+    ctx, cancel := context.WithTimeout(context.Background(), 1*time.Millisecond)
+    defer cancel()
+
+    // Wait for context to expire
+    time.Sleep(2 * time.Millisecond)
+
+    // The check should return quickly due to context cancellation
+    start := time.Now()
+    result := signal.Check(ctx)
+    elapsed := time.Since(start)
+
+    // Should return false when context is cancelled
+    if result {
+        t.Error("Expected false when context is cancelled")
+    }
+
+    // Should complete quickly (within 10ms) even with expensive operation
+    if elapsed > 10*time.Millisecond {
+        t.Errorf("Check took too long: %v (expected < 10ms)", elapsed)
+    }
+}
+```
+
+### Common Performance Pitfalls
+
+| Operation | Risk | Solution |
+|-----------|------|----------|
+| `filepath.Walk()` | Can traverse thousands of files | Add `ctx.Done()` check in walk function |
+| `os.ReadDir()` + loop | Large directories can take >10ms | Add `ctx.Done()` check in loop |
+| File scanning loops | Large files can take >10ms | Add `ctx.Done()` check in scanner loop |
+| Network I/O | Can block indefinitely | Use `conn.SetDeadline()` with 10ms timeout |
+| `time.Sleep()` | Does NOT respect context | Use `select` with `time.After()` and `ctx.Done()` |
+
+### Performance Validation
+
+Run the integration performance test to verify your signal completes within the timeout:
+
+```bash
+# Run performance integration test
+make test-integration
+
+# The binary must complete in ≤10ms
+./dashlights  # Should complete in ~10-15ms total
+```
+
+See `src/signals/context_cancellation_test.go` for examples of performance tests.
+
 ## Documentation Parity
 
 **Critical requirement**: All signals must have matching documentation files.

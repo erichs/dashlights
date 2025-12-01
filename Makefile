@@ -1,4 +1,4 @@
-.PHONY: all help build build-all test test-integration fmt fmt-check clean install hooks coverage coverage-html coverage-signals gosec install-fabric-pattern release
+.PHONY: all help build build-all test test-integration fmt fmt-check check-ctx clean install hooks coverage coverage-html coverage-signals gosec install-fabric-pattern release
 
 # Detect Go bin directory portably
 GOBIN := $(shell go env GOBIN)
@@ -7,7 +7,7 @@ ifeq ($(GOBIN),)
 endif
 
 # Default target - format, build, test, and security scan
-all: fmt build build-all test test-integration test-race gosec
+all: fmt build build-all test test-integration test-race check-ctx gosec
 	@echo "✅ All checks passed!"
 
 help:
@@ -19,6 +19,7 @@ help:
 	@echo "  make test              - Run all tests"
 	@echo "  make test-integration  - Run integration tests (including performance)"
 	@echo "  make test-race         - Run tests with race detector"
+	@echo "  make check-ctx         - Check that all signals respect context cancellation"
 	@echo "  make gosec             - Run security scanner (gosec) with audit mode"
 	@echo "  make coverage          - Run tests with coverage report"
 	@echo "  make coverage-html     - Generate HTML coverage report"
@@ -124,6 +125,39 @@ fmt-check:
 	@echo "Checking Go file formatting..."
 	@test -z "$$(gofmt -l .)" || (echo "❌ Files need formatting. Run 'make fmt'" && gofmt -l . && exit 1)
 	@echo "✅ All files properly formatted"
+
+# Check that all signals respect context cancellation
+check-ctx:
+	@echo "Checking signals respect context cancellation..."
+	@missing=0; \
+	checked=0; \
+	for file in src/signals/*.go; do \
+		if echo "$$file" | grep -q "_test.go"; then continue; fi; \
+		if echo "$$file" | grep -q "signal.go"; then continue; fi; \
+		if echo "$$file" | grep -q "registry.go"; then continue; fi; \
+		if grep -q "func.*Check(ctx context.Context)" "$$file"; then \
+			checked=$$((checked + 1)); \
+			if ! grep -q "ctx.Done()" "$$file"; then \
+				if [ $$missing -eq 0 ]; then \
+					echo "⚠️  Signals without ctx.Done() checks:"; \
+				fi; \
+				basename="$$(basename $$file)"; \
+				echo "   - $$basename"; \
+				missing=$$((missing + 1)); \
+			fi; \
+		fi; \
+	done; \
+	if [ $$missing -eq 0 ]; then \
+		echo "✅ All $$checked signals check ctx.Done()"; \
+	else \
+		with_ctx=$$((checked - missing)); \
+		echo ""; \
+		echo "Summary: $$with_ctx/$$checked signals check ctx.Done()"; \
+		echo ""; \
+		echo "Note: Simple signals (env var checks, single file reads) may not need ctx.Done()."; \
+		echo "Signals with loops, directory traversal, or file scanning MUST check ctx.Done()."; \
+		echo "See CONTRIBUTING.md 'Performance Requirements' for details."; \
+	fi
 
 # Clean built binaries
 clean:

@@ -74,6 +74,13 @@ func (s *RootKubeContextSignal) Check(ctx context.Context) bool {
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
+		// Check if context is cancelled
+		select {
+		case <-ctx.Done():
+			return false
+		default:
+		}
+
 		line := scanner.Text()
 		trimmed := strings.TrimSpace(line)
 
