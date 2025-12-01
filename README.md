@@ -30,8 +30,8 @@ Dashlights continuously scans for routine security and developer hygiene trouble
 $ dashlights
 🚨 2
 
-# Diagnostic mode: shows detailed information
-$ dashlights -d
+# Details mode: shows detailed information
+$ dashlights --details
 🩲 Raw secrets in environment: AWS_ACCESS_KEY, JIRA_ACCESS_TOKEN
    → Fix: Use 1Password (op://), dotenvx (encrypted:), or other secret management tools
 
@@ -257,11 +257,11 @@ $ dashlights
 
 ```
 
-### Diagnostic Mode (`-d` or `--obd`)
+### Details Mode (`-d` or `--details`)
 Shows detailed information about each detected security issue:
 
 ```shell
-$ dashlights -d
+$ dashlights --details
 Security Issues Detected:
 
 🩲 Naked credentials detected in environment
@@ -271,20 +271,20 @@ Security Issues Detected:
    → Fix: Unset LD_PRELOAD unless explicitly required for debugging
 ```
 
-### Clear Mode (`-c`)
+### Clear Custom Lights (`-c` or `--clear-custom`)
 Clears all custom DASHLIGHT_ environment variables:
 
 ```shell
-$ dashlights -c
+$ dashlights --clear-custom
 ```
 
-### List Mode (`-l`)
-Lists all custom dashboard lights:
+### List Custom Lights (`-l` or `--list-custom`)
+Lists all supported color attributes and emoji aliases for custom dashboard lights:
 
 (see Custom Dashboard Lights below)
 
 ```shell
-$ dashlights -l
+$ dashlights --list-custom
 Supported color attributes:
 BGBLACK, BGBLUE, BGCYAN, BGGREEN, BGHIBLACK, BGHIBLUE, BGHICYAN, BGHIGREEN, BGHIMAGENTA, BGHIRED, BGHIWHITE, BGHIYELLOW, BGMAGENTA, BGRED, BGWHITE, BGYELLOW, FGBLACK, FGBLUE, FGCYAN, FGGREEN, FGHIBLACK, FGHIBLUE, FGHICYAN, FGHIGREEN, FGHIMAGENTA, FGHIRED, FGHIWHITE, FGHIYELLOW, FGMAGENTA, FGRED, FGWHITE, FGYELLOW, REVERSEVIDEO
 
@@ -319,13 +319,13 @@ WRENCH               1F527      🔧
 ### Command Line Options
 
 ```
-Usage: dashlights [--obd] [--verbose] [--list] [--clear]
+Usage: dashlights [--details] [--verbose] [--list-custom] [--clear-custom]
 
 Options:
-  --obd, -d              On-Board Diagnostics: display detailed security diagnostics
+  --details, -d          Show detailed diagnostic information for detected issues
   --verbose, -v          Verbose mode: show documentation links in diagnostic output
-  --list, -l             List custom dashboard lights
-  --clear, -c            Shell code to clear set dashlights
+  --list-custom, -l      List supported color attributes and emoji aliases for custom lights
+  --clear-custom, -c     Shell code to clear custom DASHLIGHT_ environment variables
   --help, -h             Display this help and exit
   --version              Display version and exit
 ```

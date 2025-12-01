@@ -120,14 +120,14 @@ func TestDisplayDashlights(t *testing.T) {
 }
 
 func TestDefaultFlagStates(t *testing.T) {
-	if args.ObdMode {
-		t.Error("Diagnostic mode should not start enabled!")
+	if args.DetailsMode {
+		t.Error("Details mode should not start enabled!")
 	}
-	if args.ListMode {
-		t.Error("List color mode should not start enabled!")
+	if args.ListCustomMode {
+		t.Error("List custom mode should not start enabled!")
 	}
-	if args.ClearMode {
-		t.Error("Clear mode should not start enabled!")
+	if args.ClearCustomMode {
+		t.Error("Clear custom mode should not start enabled!")
 	}
 }
 
@@ -157,8 +157,8 @@ func TestVersion(t *testing.T) {
 }
 
 func TestListColorModeDisplay(t *testing.T) {
-	args.ListMode = true
-	defer func() { args.ListMode = false }()
+	args.ListCustomMode = true
+	defer func() { args.ListCustomMode = false }()
 
 	var b bytes.Buffer
 	lights := make([]dashlight, 0)
@@ -166,13 +166,13 @@ func TestListColorModeDisplay(t *testing.T) {
 
 	display(&b, &lights, nil)
 	if !strings.Contains(b.String(), "BGWHITE") {
-		t.Errorf("List mode should contain color attribute keys, found: %s", b.String())
+		t.Errorf("List custom mode should contain color attribute keys, found: %s", b.String())
 	}
 }
 
 func TestClearModeDisplay(t *testing.T) {
-	args.ClearMode = true
-	defer func() { args.ClearMode = false }()
+	args.ClearCustomMode = true
+	defer func() { args.ClearCustomMode = false }()
 
 	var b bytes.Buffer
 	lights := make([]dashlight, 0)
@@ -181,13 +181,13 @@ func TestClearModeDisplay(t *testing.T) {
 	display(&b, &lights, nil)
 	expectStr := "unset DASHLIGHT_CM_0021"
 	if !strings.Contains(b.String(), expectStr) {
-		t.Errorf("Clear mode should '%s', found: %s", expectStr, b.String())
+		t.Errorf("Clear custom mode should '%s', found: %s", expectStr, b.String())
 	}
 }
 
 func TestDiagModeDisplay(t *testing.T) {
-	args.ObdMode = true
-	defer func() { args.ObdMode = false }()
+	args.DetailsMode = true
+	defer func() { args.DetailsMode = false }()
 
 	var b bytes.Buffer
 	lights := make([]dashlight, 0)

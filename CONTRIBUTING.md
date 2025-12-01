@@ -67,7 +67,7 @@ If you have any questions about your eligibility to contribute, please reach out
 
 6. **Verify everything works**:
    ```bash
-   ./dashlights -d
+   ./dashlights --details
    ```
 
 ## Development Workflow
