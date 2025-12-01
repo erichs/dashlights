@@ -34,10 +34,10 @@ type dashlight struct {
 }
 
 type cliArgs struct {
-	ObdMode     bool `arg:"-d,--obd,help:On-Board Diagnostics: display diagnostic info if provided."`
-	VerboseMode bool `arg:"-v,--verbose,help:Verbose mode: show documentation links in diagnostic output."`
-	ListMode    bool `arg:"-l,--list,help:List supported color attributes and emoji aliases."`
-	ClearMode   bool `arg:"-c,--clear,help:Shell code to clear set dashlights."`
+	DetailsMode     bool `arg:"-d,--details,help:Show detailed diagnostic information for detected issues."`
+	VerboseMode     bool `arg:"-v,--verbose,help:Verbose mode: show documentation links in diagnostic output."`
+	ListCustomMode  bool `arg:"-l,--list-custom,help:List supported color attributes and emoji aliases for custom lights."`
+	ClearCustomMode bool `arg:"-c,--clear-custom,help:Shell code to clear custom DASHLIGHT_ environment variables."`
 }
 
 // Version returns the version string for --version flag
@@ -87,20 +87,20 @@ func parseEnviron(environ []string, lights *[]dashlight) {
 }
 
 func display(w io.Writer, lights *[]dashlight, results []signals.Result) {
-	if args.ListMode {
+	if args.ListCustomMode {
 		displayColorList(w)
 		flexPrintln(w, "")
 		displayEmojiList(w)
 		return
 	}
-	if args.ClearMode {
+	if args.ClearCustomMode {
 		displayClearCodes(w, lights)
 		return
 	}
 
 	// New default output: 🚨 {count} {DASHLIGHT_runes}
-	if args.ObdMode {
-		// Diagnostic mode: show detailed signal information
+	if args.DetailsMode {
+		// Details mode: show detailed signal information
 		displaySignalDiagnostics(w, results)
 	} else {
 		// Default mode: show siren, count, and DASHLIGHT runes
