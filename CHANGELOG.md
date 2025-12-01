@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.0-alpha] - 2025-11-30
 
+### Upgrade Notes
+This is a major breaking change to the design of dashlights. It still supports the previous custom emoji and colors via ENV vars, but this is now a minor feature, and may be deprecated in a future release. See install instructions in README for install/upgrade details.
+
 ### Added
 - Added a security policy document outlining vulnerability disclosure procedures
 - Added verbose diagnostic mode with portable documentation links
