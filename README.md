@@ -1,9 +1,21 @@
 # Dashlights
+
+<table border="0" cellpadding="0" cellspacing="0" style="border: none;">
+<tr>
+<td style="border: none;">
+<img src="speedgopher.png" alt="Speed Gopher" width="320"/>
+</td>
+<td style="border: none;">
+
+> A fast, security-focused "check engine light" for your prompt!
+
 [![Go Report Card](https://goreportcard.com/badge/github.com/erichs/dashlights)](https://goreportcard.com/report/github.com/erichs/dashlights)
 [![codecov](https://codecov.io/github/erichs/dashlights/graph/badge.svg?token=V8KLQJF6QV)](https://codecov.io/github/erichs/dashlights)
 [![openssf](https://www.bestpractices.dev/projects/11518/badge)](https://www.bestpractices.dev/projects/11518)
 
-> A fast, security-focused "check engine light" for your prompt!
+</td>
+</tr>
+</table>
 
 ## What does this do?
 
