@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	arg "github.com/alexflint/go-arg"
@@ -46,6 +47,7 @@ func (cliArgs) Version() string {
 }
 
 var args cliArgs
+var lights []dashlight
 
 func flexPrintf(w io.Writer, format string, args ...interface{}) {
 	fmt.Fprintf(w, format, args...)
@@ -61,21 +63,48 @@ func displayClearCodes(w io.Writer, lights *[]dashlight) {
 	}
 }
 
-var lights []dashlight
-
-func init() {
-	parseEnviron(os.Environ(), &lights)
-}
-
 func main() {
+	// start watchdog timer for 10.1ms, this will exit the program and 'fail open'
+	// if any security signals are not respecting context cancellation for any reason
+	watchdog := time.AfterFunc(time.Duration(10.1*float64(time.Millisecond)), func() {
+		// fmt.Println("Timeout!") TODO: add debug logging if this occurs
+		os.Exit(0)
+	})
+	defer watchdog.Stop() // Cancel watchdog on normal completion
+
 	arg.MustParse(&args)
 
 	// Run security signal checks with a tight timeout for performance
-	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
 	defer cancel()
 
-	allSignals := signals.GetAllSignals()
-	results := signals.CheckAll(ctx, allSignals)
+	var (
+		wg      sync.WaitGroup
+		results []signals.Result
+		envRaw  []string
+	)
+
+	wg.Add(2)
+	// Parse DASHLIGHT_ environment variables
+	go func() {
+		defer wg.Done()
+		envRaw = os.Environ()
+		// we pass a local slice to avoid locking: we'll assign to global
+		// 'lights' after parsing
+		localLights := []dashlight{}
+		parseEnviron(envRaw, &localLights)
+		lights = localLights
+	}()
+
+	// Security signal checks
+	go func() {
+		defer wg.Done()
+		allSignals := signals.GetAllSignals()
+		results = signals.CheckAll(ctx, allSignals)
+	}()
+
+	wg.Wait() // Wait for both goroutines to complete,
+	// if we timed out, the watchdog will exit here
 
 	display(os.Stdout, &lights, results)
 }

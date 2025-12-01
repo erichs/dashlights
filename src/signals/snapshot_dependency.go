@@ -40,7 +40,7 @@ func (s *SnapshotDependencySignal) Remediation() string {
 
 func (s *SnapshotDependencySignal) Check(ctx context.Context) bool {
 	// First check if we're on a release branch or tag
-	if !isReleaseContext() {
+	if !isReleaseContext(ctx) {
 		// Not on a release branch/tag, SNAPSHOT is OK
 		return false
 	}
@@ -66,7 +66,7 @@ func (s *SnapshotDependencySignal) Check(ctx context.Context) bool {
 
 // isReleaseContext checks if we're on a release branch or tag
 // Optimized to read .git directory directly instead of shelling out
-func isReleaseContext() bool {
+func isReleaseContext(ctx context.Context) bool {
 	// Get current HEAD SHA
 	headSHA, err := getCurrentHeadSHA()
 	if err != nil {
@@ -74,7 +74,7 @@ func isReleaseContext() bool {
 	}
 
 	// Check if HEAD matches any tag (indicates we're on a release tag)
-	if isHeadOnTag(headSHA) {
+	if isHeadOnTag(ctx, headSHA) {
 		return true
 	}
 
@@ -163,7 +163,7 @@ func getCurrentBranch() (string, error) {
 }
 
 // isHeadOnTag checks if the current HEAD SHA matches any tag
-func isHeadOnTag(headSHA string) bool {
+func isHeadOnTag(ctx context.Context, headSHA string) bool {
 	// Check .git/refs/tags/* for matching SHAs
 	tagsDir := ".git/refs/tags"
 	entries, err := os.ReadDir(tagsDir)
@@ -173,6 +173,13 @@ func isHeadOnTag(headSHA string) bool {
 	}
 
 	for _, entry := range entries {
+		// Check if context is cancelled
+		select {
+		case <-ctx.Done():
+			return false
+		default:
+		}
+
 		if entry.IsDir() {
 			continue
 		}

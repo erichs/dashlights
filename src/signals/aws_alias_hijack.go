@@ -102,6 +102,13 @@ func (s *AWSAliasHijackSignal) Check(ctx context.Context) bool {
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
+		// Check if context is cancelled
+		select {
+		case <-ctx.Done():
+			return false
+		default:
+		}
+
 		line := strings.TrimSpace(scanner.Text())
 
 		// Skip empty lines and comments

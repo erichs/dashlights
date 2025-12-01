@@ -306,7 +306,7 @@ func TestZombieProcessesSignal_Check_WithMock_NoZombies(t *testing.T) {
 	mockFS.files["/proc/3/stat"] = []byte("3 (vim) S 2 3 3")
 
 	signal := NewZombieProcessesSignal()
-	result := signal.checkWithFS(mockFS)
+	result := signal.checkWithFS(context.Background(), mockFS)
 
 	if result {
 		t.Error("Expected false when no zombies present")
@@ -334,7 +334,7 @@ func TestZombieProcessesSignal_Check_WithMock_FewZombies(t *testing.T) {
 	mockFS.files["/proc/3/stat"] = []byte("3 (defunct) Z 0 3 3")
 
 	signal := NewZombieProcessesSignal()
-	result := signal.checkWithFS(mockFS)
+	result := signal.checkWithFS(context.Background(), mockFS)
 
 	if result {
 		t.Error("Expected false when zombie count <= 5")
@@ -359,7 +359,7 @@ func TestZombieProcessesSignal_Check_WithMock_ManyZombies(t *testing.T) {
 	mockFS.dirs["/proc"] = entries
 
 	signal := NewZombieProcessesSignal()
-	result := signal.checkWithFS(mockFS)
+	result := signal.checkWithFS(context.Background(), mockFS)
 
 	if !result {
 		t.Error("Expected true when zombie count > 5")
@@ -395,7 +395,7 @@ func TestZombieProcessesSignal_Check_WithMock_MixedProcesses(t *testing.T) {
 	mockFS.files["/proc/7/stat"] = []byte("7 (defunct) Z 0 7 7")
 
 	signal := NewZombieProcessesSignal()
-	result := signal.checkWithFS(mockFS)
+	result := signal.checkWithFS(context.Background(), mockFS)
 
 	if result {
 		t.Error("Expected false when zombie count <= 5")
@@ -426,7 +426,7 @@ func TestZombieProcessesSignal_Check_WithMock_InvalidProcEntries(t *testing.T) {
 	mockFS.files["/proc/3/stat"] = []byte("3 (bash) S 1 3 3")
 
 	signal := NewZombieProcessesSignal()
-	result := signal.checkWithFS(mockFS)
+	result := signal.checkWithFS(context.Background(), mockFS)
 
 	// Should only count the 1 zombie from valid PIDs
 	if result {
@@ -456,7 +456,7 @@ func TestZombieProcessesSignal_Check_WithMock_MalformedStatFile(t *testing.T) {
 	mockFS.files["/proc/3/stat"] = []byte("3 (defunct) Z 0 3 3")
 
 	signal := NewZombieProcessesSignal()
-	result := signal.checkWithFS(mockFS)
+	result := signal.checkWithFS(context.Background(), mockFS)
 
 	// Should only count process 3 as zombie (process 2 skipped due to malformed stat)
 	if result {
@@ -474,7 +474,7 @@ func TestZombieProcessesSignal_Check_WithMock_ReadErrors(t *testing.T) {
 	mockFS.readErr = fmt.Errorf("permission denied")
 
 	signal := NewZombieProcessesSignal()
-	result := signal.checkWithFS(mockFS)
+	result := signal.checkWithFS(context.Background(), mockFS)
 
 	// Should return false on error
 	if result {
@@ -489,7 +489,7 @@ func TestZombieProcessesSignal_Check_WithMock_ReadDirError(t *testing.T) {
 	// Don't set dirs["/proc"], so ReadDir will return error
 
 	signal := NewZombieProcessesSignal()
-	result := signal.checkWithFS(mockFS)
+	result := signal.checkWithFS(context.Background(), mockFS)
 
 	// Should return false when ReadDir fails
 	if result {

@@ -44,14 +44,14 @@ func (s *ProdPanicSignal) Check(ctx context.Context) bool {
 	}
 
 	// Check kubectl context
-	if s.checkKubeContext() {
+	if s.checkKubeContext(ctx) {
 		return true
 	}
 
 	return false
 }
 
-func (s *ProdPanicSignal) checkKubeContext() bool {
+func (s *ProdPanicSignal) checkKubeContext(ctx context.Context) bool {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return false
@@ -81,6 +81,13 @@ func (s *ProdPanicSignal) checkKubeContext() bool {
 	// Simple line-by-line parsing to find "current-context: <value>"
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
+		// Check if context is cancelled
+		select {
+		case <-ctx.Done():
+			return false
+		default:
+		}
+
 		line := strings.TrimSpace(scanner.Text())
 		if strings.HasPrefix(line, "current-context:") {
 			parts := strings.SplitN(line, ":", 2)

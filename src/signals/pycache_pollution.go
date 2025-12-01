@@ -46,6 +46,13 @@ func (s *PyCachePollutionSignal) Check(ctx context.Context) bool {
 
 	// Walk the current directory looking for __pycache__ directories
 	err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
+		// Check if context is cancelled
+		select {
+		case <-ctx.Done():
+			return filepath.SkipAll
+		default:
+		}
+
 		if err != nil {
 			return nil // Skip errors
 		}

@@ -89,12 +89,12 @@ func (s *ZombieProcessesSignal) Check(ctx context.Context) bool {
 		return false
 	}
 
-	return s.checkWithFS(s.fs)
+	return s.checkWithFS(ctx, s.fs)
 }
 
 // checkWithFS performs the actual check using the provided filesystem interface
 // This is separated to allow for testing with mocked filesystems
-func (s *ZombieProcessesSignal) checkWithFS(fs procFS) bool {
+func (s *ZombieProcessesSignal) checkWithFS(ctx context.Context, fs procFS) bool {
 	// Read /proc/stat to count zombie processes
 	data, err := fs.ReadFile("/proc/stat")
 	if err != nil {
@@ -118,6 +118,13 @@ func (s *ZombieProcessesSignal) checkWithFS(fs procFS) bool {
 	}
 
 	for _, entry := range entries {
+		// Check if context is cancelled
+		select {
+		case <-ctx.Done():
+			return false
+		default:
+		}
+
 		if !entry.IsDir() {
 			continue
 		}

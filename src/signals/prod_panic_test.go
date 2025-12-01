@@ -129,7 +129,7 @@ func TestProdPanicSignal_checkKubeContext_NoKubeConfig(t *testing.T) {
 
 	signal := NewProdPanicSignal()
 
-	if signal.checkKubeContext() {
+	if signal.checkKubeContext(context.Background()) {
 		t.Error("Expected false when .kube/config doesn't exist")
 	}
 }
@@ -168,7 +168,7 @@ kind: Config
 
 	signal := NewProdPanicSignal()
 
-	if !signal.checkKubeContext() {
+	if !signal.checkKubeContext(context.Background()) {
 		t.Error("Expected true when current-context is production")
 	}
 
@@ -193,7 +193,7 @@ func TestProdPanicSignal_checkKubeContext_DirectoryTraversalPrevention(t *testin
 	signal := NewProdPanicSignal()
 
 	// The check should return false (reject the malicious path)
-	result := signal.checkKubeContext()
+	result := signal.checkKubeContext(context.Background())
 	if result {
 		t.Error("Expected false when home directory contains '..' (directory traversal attempt)")
 	}
@@ -211,7 +211,7 @@ func TestProdPanicSignal_checkKubeContext_RelativePathPrevention(t *testing.T) {
 	signal := NewProdPanicSignal()
 
 	// The check should return false (reject relative paths)
-	result := signal.checkKubeContext()
+	result := signal.checkKubeContext(context.Background())
 	if result {
 		t.Error("Expected false when home directory is relative (not absolute)")
 	}
@@ -241,7 +241,7 @@ kind: Config
 	signal := NewProdPanicSignal()
 
 	// Should work with valid absolute path
-	result := signal.checkKubeContext()
+	result := signal.checkKubeContext(context.Background())
 	if !result {
 		t.Error("Expected true with valid absolute path and production context")
 	}

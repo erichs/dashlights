@@ -1,6 +1,7 @@
 package signals
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -32,7 +33,7 @@ func BenchmarkIsReleaseContext_Optimized(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		isReleaseContext()
+		isReleaseContext(context.Background())
 	}
 }
 
@@ -160,6 +161,6 @@ func BenchmarkIsHeadOnTag(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		isHeadOnTag(headSHA)
+		isHeadOnTag(context.Background(), headSHA)
 	}
 }
