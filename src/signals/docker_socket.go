@@ -109,10 +109,10 @@ func (s *DockerSocketSignal) checkDarwinSocket(info os.FileInfo, socketPath stri
 			// This is Docker Desktop - check the actual socket permissions
 			targetInfo, err := os.Stat(targetPath)
 			if err != nil {
-				// Target doesn't exist - this is an orphaned symlink
-				s.issue = "orphaned"
-				s.orphanedPath = targetPath
-				return true
+				// Target doesn't exist - Docker Desktop not running
+				// This is normal, not a misconfiguration. Docker commands
+				// will fail fast with a clear error, not hang silently.
+				return false
 			}
 
 			// Check the actual socket permissions

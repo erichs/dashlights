@@ -330,16 +330,11 @@ func TestDockerSocketSignal_MacOSOrphanedSymlink(t *testing.T) {
 		t.Fatalf("Failed to stat symlink: %v", err)
 	}
 
-	// Should trigger because symlink target doesn't exist
+	// Should NOT trigger - orphaned Docker Desktop symlink just means
+	// Docker isn't running, not a misconfiguration. Commands fail fast.
 	result := signal.checkDarwinSocket(info, symlinkPath)
-	if !result {
-		t.Error("Expected true for orphaned symlink")
-	}
-	if signal.issue != "orphaned" {
-		t.Errorf("Expected issue='orphaned', got '%s'", signal.issue)
-	}
-	if signal.orphanedPath != nonExistentTarget {
-		t.Errorf("Expected orphanedPath='%s', got '%s'", nonExistentTarget, signal.orphanedPath)
+	if result {
+		t.Error("Expected false for orphaned Docker Desktop symlink (not a real issue)")
 	}
 }
 
