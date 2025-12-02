@@ -144,7 +144,9 @@ func displaySecurityStatus(w io.Writer, results []signals.Result, lights *[]dash
 
 	// Only show siren if there are security issues
 	if count > 0 {
-		flexPrintf(w, "🚨 %d", count)
+		// Use gray color for count to be legible on both light and dark backgrounds
+		gray := color.New(color.FgHiBlack)
+		flexPrintf(w, "🚨 %s", gray.Sprintf("%d", count))
 	}
 
 	// Append DASHLIGHT_ runes if any

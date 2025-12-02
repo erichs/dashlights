@@ -17,6 +17,8 @@
 </tr>
 </table>
 
+[What?](#what-does-this-do) | [Why?](#why-is-this-needed) | [Install](#how-to-install) | [Configure](#configure-your-prompt) | [Usage](#usage) | [Performance](#performance) | [Security](#security)
+
 ## What does this do?
 
 Dashlights continuously scans for routine security and developer hygiene trouble signals, just like a 'check engine light' for your development environment.
@@ -93,6 +95,8 @@ Dashlights performs over 30 concurrent security checks:
 - **By adopting a 'clean as you go' mentality, we can each take personal responsibility for reducing the blast radius of attacks.**
 
 ## How to Install
+
+NOTE: 1.0.0-alpha is available, check out the [releases](https://github.com/erichs/dashlights/releases) page for details.
 
 ### Using eget (recommended)
 
@@ -348,28 +352,19 @@ Dashlights also supports custom environment variable indicators (legacy feature)
 ```shell
 $ export DASHLIGHT_VPN_1F517="VPN is up"
 $ dashlights
-🚨 0 🔗
+🚨 1 🔗
 ```
 
 Any environment variable of the form `DASHLIGHT_{name}_{utf8hex}` will be displayed as a custom indicator.
 
 ## Performance
 
-Dashlights is designed to be fast enough for shell prompts:
+Dashlights is designed to be fast enough for shell prompts and safe for concurrent use:
+
 - **Target:** ≤10ms execution time
-- **Actual:** ~3ms on modern hardware (30+ concurrent checks)
-- **Verified:** Integration test enforces performance threshold
-
-## Concurrency & Thread-Safety
-
-Dashlights is designed to be safe when multiple instances run concurrently (e.g., multiple terminal prompts rendering simultaneously):
-
-- **Fresh State:** Each execution creates fresh signal instances, preventing shared mutable state
-- **Process-Wide Operations:** Operations that modify process-wide state (e.g., umask checks) are serialized with mutexes
-- **Unique Resources:** Temporary files use unique names to prevent collisions between concurrent instances
-- **Tested:** Comprehensive concurrency tests verify thread-safety under high contention
-
-This design ensures that running dashlights in multiple terminal windows or tmux panes simultaneously will not cause race conditions or incorrect results.
+- **Actual:** ~3ms on modern hardware (30+ concurrent checks in parallel)
+- **Verified:** Integration tests enforce performance threshold
+- **Thread-Safe:** Fresh signal instances per execution, mutex-protected process-wide operations, and unique temp file names ensure safe concurrent use across multiple terminals or tmux panes
 
 ## Security
 
