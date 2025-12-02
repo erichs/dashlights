@@ -38,15 +38,15 @@ Dashlights performs over 30 concurrent security checks, organized into five cate
 
 ## System Health
 
-25. 💾 **[Full Tank](docs/signals/disk_space.md)** - Alerts when disk usage exceeds 90% [[code](src/signals/disk_space.go)]
-26. ♻️ **[Reboot Pending](docs/signals/reboot_pending.md)** - Detects pending system reboot (Linux) [[code](src/signals/reboot_pending.go)]
-27. 🧟 **[Zombie Processes](docs/signals/zombie_processes.md)** - Alerts on excessive zombie processes [[code](src/signals/zombie_processes.go)]
-28. 💔 **[Dangling Symlinks](docs/signals/dangling_symlinks.md)** - Detects symlinks pointing to non-existent targets [[code](src/signals/dangling_symlinks.go)]
-29. ⏰ **[Time Drift Detected](docs/signals/time_drift.md)** - Detects drift between system time and filesystem time [[code](src/signals/time_drift.go)]
+26. 💾 **[Full Tank](docs/signals/disk_space.md)** - Alerts when disk usage exceeds 90% [[code](src/signals/disk_space.go)]
+27. ♻️ **[Reboot Pending](docs/signals/reboot_pending.md)** - Detects pending system reboot (Linux) [[code](src/signals/reboot_pending.go)]
+28. 🧟 **[Zombie Processes](docs/signals/zombie_processes.md)** - Alerts on excessive zombie processes [[code](src/signals/zombie_processes.go)]
+29. 💔 **[Dangling Symlinks](docs/signals/dangling_symlinks.md)** - Detects symlinks pointing to non-existent targets [[code](src/signals/dangling_symlinks.go)]
+30. ⏰ **[Time Drift Detected](docs/signals/time_drift.md)** - Detects drift between system time and filesystem time [[code](src/signals/time_drift.go)]
 
 ## Infrastructure Security (InfraSec)
 
-30. 🏗️ **[Local Terraform State](docs/signals/terraform_state_local.md)** - Checks for local terraform.tfstate files (should use remote state) [[code](src/signals/terraform_state_local.go)]
-31. ☸️ **[Root Kube Context](docs/signals/root_kube_context.md)** - Alerts when Kubernetes context uses kube-system namespace [[code](src/signals/root_kube_context.go)]
-32. 🔐 **[Dangerous TF_VAR](docs/signals/dangerous_tf_var.md)** - Checks for dangerous Terraform variables in environment (secrets in shell history) [[code](src/signals/dangerous_tf_var.go)]
+31. 🏗️ **[Local Terraform State](docs/signals/terraform_state_local.md)** - Checks for local terraform.tfstate files (should use remote state) [[code](src/signals/terraform_state_local.go)]
+32. ☸️ **[Root Kube Context](docs/signals/root_kube_context.md)** - Alerts when Kubernetes context uses kube-system namespace [[code](src/signals/root_kube_context.go)]
+33. 🔐 **[Dangerous TF_VAR](docs/signals/dangerous_tf_var.md)** - Checks for dangerous Terraform variables in environment (secrets in shell history) [[code](src/signals/dangerous_tf_var.go)]
 
