@@ -139,6 +139,17 @@ make build
 make install
 ```
 
+### Authorizing on macOS
+
+macOS users may temporarily need to authorize the binary after the first run:
+
+```shell
+# Authorize the binary (only needed once)
+xattr -d com.apple.quarantine dashlights
+```
+
+NOTE: code signing and notarization are being worked on!
+
 ## Configure your PROMPT
 
 After installing dashlights, add it to your shell prompt to get continuous security monitoring.
