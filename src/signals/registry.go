@@ -39,6 +39,7 @@ func GetAllSignals() []Signal {
 		NewMissingInitPySignal(),       // Directory walk - checks for missing __init__.py
 		NewSnapshotDependencySignal(),  // Optimized .git file reads
 		NewPwnRequestSignal(),          // GitHub Actions workflow scan
+		NewMissingGitHooksSignal(),     // Detects uninstalled git hooks
 
 		// System health signals
 		NewDiskSpaceSignal(),        // Syscall

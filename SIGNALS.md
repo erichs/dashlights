@@ -34,6 +34,7 @@ Dashlights performs over 30 concurrent security checks, organized into five cate
 22. 📁 **[Missing __init__.py](docs/signals/missing_init_py.md)** - Detects Python packages missing __init__.py files [[code](src/signals/missing_init_py.go)]
 23. ☕ **[Snapshot Dependency](docs/signals/snapshot_dependency.md)** - Checks for SNAPSHOT dependencies on release branches (Java/Maven) [[code](src/signals/snapshot_dependency.go)]
 24. 🎣 **[Pwn Request Risk](docs/signals/pwnrequest.md)** - Detects dangerous GitHub Actions pull_request_target patterns [[code](src/signals/pwnrequest.go)]
+25. ⚓ **[Missing Git Hooks](docs/signals/missing_git_hooks.md)** - Detects when hook manager config exists but hooks aren't installed [[code](src/signals/missing_git_hooks.go)]
 
 ## System Health
 
