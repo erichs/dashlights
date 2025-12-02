@@ -1,12 +1,13 @@
 #!/bin/bash
-# Pre-push hook to validate that all signals have corresponding documentation
+# Pre-push hook to validate signal documentation, SIGNALS.md, and README.md
 
 set -e
 
-echo "Validating signal documentation..."
-
 # Get the repository root
 REPO_ROOT=$(git rev-parse --show-toplevel)
+
+# Track errors
+ERRORS=()
 
 # Find all signal implementation files (excluding test files, signal.go, and registry.go)
 SIGNAL_FILES=$(find "$REPO_ROOT/src/signals" -name "*.go" \
@@ -15,35 +16,114 @@ SIGNAL_FILES=$(find "$REPO_ROOT/src/signals" -name "*.go" \
   ! -name "registry.go" \
   -type f | sort)
 
-# Track missing documentation
-MISSING_DOCS=()
+# Count the number of signals
+SIGNAL_COUNT=$(echo "$SIGNAL_FILES" | wc -l | tr -d ' ')
 
-# Check each signal file for corresponding documentation
+echo "Validating $SIGNAL_COUNT signals..."
+
+# ============================================================================
+# Check 1: All signals have documentation in docs/signals/
+# ============================================================================
+echo ""
+echo "Checking documentation files..."
+
+MISSING_DOCS=()
 for signal_file in $SIGNAL_FILES; do
-  # Get the base filename without extension
   base_name=$(basename "$signal_file" .go)
-  
-  # Expected documentation file path
   doc_file="$REPO_ROOT/docs/signals/${base_name}.md"
-  
-  # Check if documentation exists
+
   if [ ! -f "$doc_file" ]; then
     MISSING_DOCS+=("$base_name")
   fi
 done
 
-# Report results
 if [ ${#MISSING_DOCS[@]} -eq 0 ]; then
-  echo "✓ All signals have documentation"
-  exit 0
+  echo "✓ All signals have documentation in docs/signals/"
 else
-  echo "✗ Error: Missing documentation for the following signals:"
+  echo "✗ Missing documentation for:"
   for signal in "${MISSING_DOCS[@]}"; do
     echo "  - $signal (expected: docs/signals/${signal}.md)"
   done
+  ERRORS+=("Missing documentation files")
+fi
+
+# ============================================================================
+# Check 2: SIGNALS.md lists all signals
+# ============================================================================
+echo ""
+echo "Checking SIGNALS.md..."
+
+SIGNALS_MD="$REPO_ROOT/SIGNALS.md"
+if [ ! -f "$SIGNALS_MD" ]; then
+  echo "✗ SIGNALS.md not found"
+  ERRORS+=("SIGNALS.md not found")
+else
+  MISSING_IN_SIGNALS_MD=()
+  for signal_file in $SIGNAL_FILES; do
+    base_name=$(basename "$signal_file" .go)
+    # Check if the signal's source file is linked in SIGNALS.md
+    if ! grep -q "src/signals/${base_name}.go" "$SIGNALS_MD"; then
+      MISSING_IN_SIGNALS_MD+=("$base_name")
+    fi
+  done
+
+  if [ ${#MISSING_IN_SIGNALS_MD[@]} -eq 0 ]; then
+    echo "✓ All signals are listed in SIGNALS.md"
+  else
+    echo "✗ Signals missing from SIGNALS.md:"
+    for signal in "${MISSING_IN_SIGNALS_MD[@]}"; do
+      echo "  - $signal"
+    done
+    ERRORS+=("SIGNALS.md is incomplete")
+  fi
+
+  # Check the count in SIGNALS.md header
+  SIGNALS_MD_COUNT=$(grep -c '\[\[code\]' "$SIGNALS_MD" || echo "0")
+  if [ "$SIGNALS_MD_COUNT" -eq "$SIGNAL_COUNT" ]; then
+    echo "✓ SIGNALS.md has correct count ($SIGNALS_MD_COUNT signals)"
+  else
+    echo "✗ SIGNALS.md has $SIGNALS_MD_COUNT entries but there are $SIGNAL_COUNT signals"
+    ERRORS+=("SIGNALS.md count mismatch")
+  fi
+fi
+
+# ============================================================================
+# Check 3: README.md has correct signal count
+# ============================================================================
+echo ""
+echo "Checking README.md..."
+
+README="$REPO_ROOT/README.md"
+if [ ! -f "$README" ]; then
+  echo "✗ README.md not found"
+  ERRORS+=("README.md not found")
+else
+  # Look for the signal count in README (e.g., "32 concurrent security checks")
+  README_COUNT=$(grep -oE '[0-9]+ concurrent security checks' "$README" | grep -oE '^[0-9]+' || echo "0")
+
+  if [ "$README_COUNT" -eq "$SIGNAL_COUNT" ]; then
+    echo "✓ README.md has correct count ($README_COUNT signals)"
+  else
+    echo "✗ README.md says '$README_COUNT concurrent security checks' but there are $SIGNAL_COUNT signals"
+    echo "  Update: Dashlights performs **$SIGNAL_COUNT concurrent security checks**"
+    ERRORS+=("README.md count mismatch")
+  fi
+fi
+
+# ============================================================================
+# Final result
+# ============================================================================
+echo ""
+if [ ${#ERRORS[@]} -eq 0 ]; then
+  echo "✓ All checks passed"
+  exit 0
+else
+  echo "✗ ${#ERRORS[@]} check(s) failed:"
+  for err in "${ERRORS[@]}"; do
+    echo "  - $err"
+  done
   echo ""
-  echo "Please create documentation for all signals before pushing."
-  echo "Each signal in src/signals/ must have a corresponding .md file in docs/signals/"
+  echo "Please fix these issues before pushing."
   exit 1
 fi
 

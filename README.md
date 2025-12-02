@@ -43,48 +43,9 @@ $ dashlights --details
 
 ### Security Checks
 
-Dashlights performs over 30 concurrent security checks:
+Dashlights performs **32 concurrent security checks** across five categories: Identity & Access Management, Operational Security, Repository Hygiene, System Health, and Infrastructure Security.
 
-#### Identity & Access Management (IAM)
-1. **Naked Credential** 🩲 - Finds raw secrets in environment variables
-2. **AWS CLI Alias Hijacking** 🪝 - Detects malicious AWS CLI aliases that override core commands
-
-#### Operational Security (OpSec)
-3. **Privileged Path** 💣 - Detects current directory (`.`) in PATH
-4. **Trojan Horse** 🐴 - Checks for LD_PRELOAD/DYLD_INSERT_LIBRARIES (rootkit vector)
-5. **Blind Spot** 🕶️ - Detects disabled shell history
-6. **Prod Panic** 🚨 - Alerts when kubectl/AWS context points to production
-7. **Man in the Middle** 🕵️ - Alerts on active proxy settings
-8. **Loose Cannon** 😷 - Checks for permissive umask (0000 or 0002)
-9. **Exposed Socket** 🐳 - Checks Docker socket permissions and orphaned DOCKER_HOST
-10. **Debug Mode Enabled** 🐛 - Detects debug/trace/verbose environment variables
-11. **History Permissions** 🔐 - Checks shell history files for world-readable permissions
-12. **SSH Agent Key Bloat** 🔑 - Detects too many keys in SSH agent (causes MaxAuthTries lockouts)
-13. **Open Door** 🔑 - Detects SSH private keys with incorrect permissions
-
-#### Repository Hygiene
-14. **Unignored Secret** 📝 - Checks if .env files exist but aren't in .gitignore
-15. **Root-Owned Home Files** 👑 - Finds files in $HOME owned by root
-16. **World-Writable Configs** 🌍 - Detects config files with dangerous permissions
-17. **Dead Letter** 🗝️ - Finds cryptographic keys not in .gitignore
-18. **Go Replace Directive** 🔄 - Detects replace directives in go.mod (breaks builds)
-19. **PyCache Pollution** 🐍 - Checks for __pycache__ directories not properly ignored
-20. **NPM RC Tokens** 📦 - Detects auth tokens in project .npmrc (should be in ~/.npmrc)
-21. **Cargo Path Dependencies** 🦀 - Checks for path dependencies in Cargo.toml
-22. **Missing __init__.py** 📁 - Detects Python packages missing __init__.py files
-23. **Snapshot Dependency** ☕ - Checks for SNAPSHOT dependencies on release branches (Java/Maven)
-
-#### System Health
-24. **Full Tank** 💾 - Alerts when disk usage exceeds 90%
-25. **Reboot Pending** ♻️ - Detects pending system reboot (Linux)
-26. **Zombie Processes** 🧟 - Alerts on excessive zombie processes
-27. **Dangling Symlinks** 💔 - Detects symlinks pointing to non-existent targets
-28. **Time Drift Detected** ⏰ - Detects drift between system time and filesystem time
-
-#### Infrastructure Security (InfraSec)
-29. **Local Terraform State** 🏗️ - Checks for local terraform.tfstate files (should use remote state)
-30. **Root Kube Context** ☸️ - Alerts when Kubernetes context uses kube-system namespace
-31. **Dangerous TF_VAR** 🔐 - Checks for dangerous Terraform variables in environment (secrets in shell history)
+👉 **[View the complete list of security signals →](SIGNALS.md)**
 
 ## Why is this needed?
 
