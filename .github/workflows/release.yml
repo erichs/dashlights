@@ -1,7 +1,7 @@
 name: Release
 
 # Trigger on push to main (after PR merge)
-# The release commit with the tag is HEAD~1 (parent of merge commit)
+# The release tag is on HEAD^2 (the PR branch tip, second parent of merge commit)
 on:
   push:
     branches:
@@ -22,17 +22,17 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Check for release tag on HEAD~1
+      - name: Check for release tag on HEAD^2
         id: check_tag
         run: |
-          # Get the tag on HEAD~1 (the commit before the merge commit)
-          TAG=$(git describe --tags --exact-match HEAD~1 2>/dev/null || echo "")
+          # Get the tag on HEAD^2 (the PR branch tip, second parent of merge commit)
+          TAG=$(git describe --tags --exact-match HEAD^2 2>/dev/null || echo "")
           if [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$ ]]; then
             echo "Found release tag: $TAG"
             echo "is_release=true" >> $GITHUB_OUTPUT
             echo "tag_name=$TAG" >> $GITHUB_OUTPUT
           else
-            echo "No release tag found on HEAD~1"
+            echo "No release tag found on HEAD^2"
             echo "is_release=false" >> $GITHUB_OUTPUT
             echo "tag_name=" >> $GITHUB_OUTPUT
           fi
