@@ -45,10 +45,10 @@ Dashlights performs over 30 concurrent security checks:
 
 #### Identity & Access Management (IAM)
 1. **Naked Credential** 🩲 - Finds raw secrets in environment variables
-2. **Privileged Path** 💣 - Detects current directory (`.`) in PATH
-3. **AWS CLI Alias Hijacking** 🪝 - Detects malicious AWS CLI aliases that override core commands
+2. **AWS CLI Alias Hijacking** 🪝 - Detects malicious AWS CLI aliases that override core commands
 
 #### Operational Security (OpSec)
+3. **Privileged Path** 💣 - Detects current directory (`.`) in PATH
 4. **Trojan Horse** 🐴 - Checks for LD_PRELOAD/DYLD_INSERT_LIBRARIES (rootkit vector)
 5. **Blind Spot** 🕶️ - Detects disabled shell history
 6. **Prod Panic** 🚨 - Alerts when kubectl/AWS context points to production
@@ -141,7 +141,7 @@ make install
 
 ### Authorizing on macOS
 
-macOS users may temporarily need to authorize the binary after the first run:
+macOS users may need to authorize the binary after the first run:
 
 ```shell
 # Authorize the binary (only needed once)

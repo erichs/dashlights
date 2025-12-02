@@ -12,10 +12,10 @@ func GetAllSignals() []Signal {
 	return []Signal{
 		// IAM signals
 		NewNakedCredentialsSignal(), // Env var check
-		NewPrivilegedPathSignal(),   // Env var check
 		NewAWSAliasHijackSignal(),   // File read (with permissions check)
 
 		// OpSec signals
+		NewPrivilegedPathSignal(),     // Env var check
 		NewLDPreloadSignal(),          // Env var check
 		NewHistoryDisabledSignal(),    // Env var check
 		NewProdPanicSignal(),          // File reads (kubectl/aws config)
@@ -38,6 +38,7 @@ func GetAllSignals() []Signal {
 		NewCargoPathDepsSignal(),       // File read
 		NewMissingInitPySignal(),       // Directory walk - checks for missing __init__.py
 		NewSnapshotDependencySignal(),  // Optimized .git file reads
+		NewPwnRequestSignal(),          // GitHub Actions workflow scan
 
 		// System health signals
 		NewDiskSpaceSignal(),        // Syscall
@@ -50,5 +51,6 @@ func GetAllSignals() []Signal {
 		NewTerraformStateLocalSignal(), // File stat
 		NewRootKubeContextSignal(),     // File read (.kube/config)
 		NewDangerousTFVarSignal(),      // Env var check
+
 	}
 }
