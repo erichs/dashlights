@@ -391,8 +391,13 @@ func TestUnsafeWorkflowSignal_NoWorkflowsDir(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpDir)
 
-	origDir, _ := os.Getwd()
-	os.Chdir(tmpDir)
+	origDir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get current dir: %v", err)
+	}
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatalf("Failed to change to temp dir: %v", err)
+	}
 	defer os.Chdir(origDir)
 
 	signal := NewUnsafeWorkflowSignal()
@@ -422,7 +427,7 @@ func TestUnsafeWorkflowSignal_Performance(t *testing.T) {
 	// Create multiple workflow files
 	workflows := make(map[string]string)
 	for i := 0; i < 10; i++ {
-		workflows[filepath.Base(filepath.Join("workflow", string(rune('a'+i))+".yml"))] = pwnRequestTestCases[0].workflowYAML
+		workflows[string(rune('a'+i))+".yml"] = pwnRequestTestCases[0].workflowYAML
 	}
 
 	_, cleanup := setupTestWorkflows(t, workflows)
@@ -515,8 +520,13 @@ func TestUnsafeWorkflowSignal_Check_WorkflowsDirIsFile(t *testing.T) {
 		t.Fatalf("Failed to create workflows file: %v", err)
 	}
 
-	origDir, _ := os.Getwd()
-	os.Chdir(tmpDir)
+	origDir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get current dir: %v", err)
+	}
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatalf("Failed to change to temp dir: %v", err)
+	}
 	defer os.Chdir(origDir)
 
 	signal := NewUnsafeWorkflowSignal()
@@ -549,8 +559,13 @@ func TestUnsafeWorkflowSignal_Check_SkipsNonYAMLFiles(t *testing.T) {
 		}
 	}
 
-	origDir, _ := os.Getwd()
-	os.Chdir(tmpDir)
+	origDir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get current dir: %v", err)
+	}
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatalf("Failed to change to temp dir: %v", err)
+	}
 	defer os.Chdir(origDir)
 
 	signal := NewUnsafeWorkflowSignal()
@@ -580,8 +595,13 @@ func TestUnsafeWorkflowSignal_Check_SkipsSubdirectories(t *testing.T) {
 		t.Fatalf("Failed to create subdir: %v", err)
 	}
 
-	origDir, _ := os.Getwd()
-	os.Chdir(tmpDir)
+	origDir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get current dir: %v", err)
+	}
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatalf("Failed to change to temp dir: %v", err)
+	}
 	defer os.Chdir(origDir)
 
 	signal := NewUnsafeWorkflowSignal()
@@ -659,8 +679,13 @@ jobs:
 
 	// Make file unreadable after quick scan (this is timing-dependent)
 	// For now, just verify the quick scan works
-	origDir, _ := os.Getwd()
-	os.Chdir(tmpDir)
+	origDir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get current dir: %v", err)
+	}
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatalf("Failed to change to temp dir: %v", err)
+	}
 	defer os.Chdir(origDir)
 
 	signal := NewUnsafeWorkflowSignal()
@@ -1425,8 +1450,13 @@ func TestUnsafeWorkflowSignal_Check_UnreadableWorkflowsDir(t *testing.T) {
 	}
 	defer os.Chmod(workflowsDir, 0755) // Restore for cleanup
 
-	origDir, _ := os.Getwd()
-	os.Chdir(tmpDir)
+	origDir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get current dir: %v", err)
+	}
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatalf("Failed to change to temp dir: %v", err)
+	}
 	defer os.Chdir(origDir)
 
 	signal := NewUnsafeWorkflowSignal()
