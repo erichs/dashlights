@@ -21,7 +21,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version: '1.22.4'
 
       - name: Check formatting
         run: |
@@ -46,7 +46,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version: '1.22.4'
 
       - name: Install dependencies
         run: go mod download
@@ -61,7 +61,7 @@ jobs:
             -v ${{ github.workspace }}:/workspace \
             -v $HOME/go/pkg/mod:/go/pkg/mod:ro \
             -w /workspace/src \
-            golang:1.21 go test -v -coverprofile=coverage.txt -covermode=atomic ./...
+            golang:1.22.4 go test -v -coverprofile=coverage.txt -covermode=atomic ./...
 
       - name: Run integration tests
         run: |
@@ -69,7 +69,7 @@ jobs:
             -v ${{ github.workspace }}:/workspace \
             -v $HOME/go/pkg/mod:/go/pkg/mod:ro \
             -w /workspace/src \
-            golang:1.21 go test -tags=integration -v -run TestPerformanceThreshold .
+            golang:1.22.4 go test -tags=integration -v -run TestPerformanceThreshold .
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
@@ -90,7 +90,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version: '1.22.4'
 
       - name: Generate repository URL
         run: cd src && go generate gen_repo_url.go
