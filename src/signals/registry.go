@@ -15,6 +15,7 @@ func GetAllSignals() []Signal {
 		NewAWSAliasHijackSignal(),   // File read (with permissions check)
 
 		// OpSec signals
+		NewRootLoginSignal(),          // UID check
 		NewPrivilegedPathSignal(),     // Env var check
 		NewLDPreloadSignal(),          // Env var check
 		NewHistoryDisabledSignal(),    // Env var check
