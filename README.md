@@ -336,3 +336,14 @@ Dashlights is designed to be secure:
 - **No Network Access:** Does not make any network requests
 - **No Persistence:** Does not write to disk or modify system state
 - **Gosec Audit:** Continuous security audits with gosec in audit mode, nosec disabled
+
+### Supply Chain Defense-In-Depth
+
+The build and test pipeline is hardened against supply chain attacks:
+
+- **Minimal CI Permissions:** GitHub Actions workflows run with `contents: read` only
+- **Network-Isolated Tests:** All tests run inside Docker containers with `--network=none`, completely removing the network stack
+- **Forbidden Import Tests:** Explicit tests verify that `net/http` and other network client packages are never imported
+- **No Telemetry Packages:** Tests verify no analytics, telemetry, or crash reporting dependencies exist
+
+Even if a malicious dependency were introduced, it cannot exfiltrate data during CI: HTTP requests, TCP/UDP connections, and DNS lookups all fail with "network is unreachable".

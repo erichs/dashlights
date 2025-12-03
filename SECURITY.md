@@ -102,6 +102,44 @@ gpg --encrypt --armor --recipient <maintainer's email> your-report.txt
 # Send the encrypted output via email
 ```
 
+## Security Architecture
+
+### Application Security Boundaries
+
+Dashlights operates within strict security boundaries:
+
+**ALLOWED:**
+- Read local files (config files, .git, /proc)
+- Read environment variables
+- Unix socket IPC (SSH agent only)
+- Write to stdout/stderr
+
+**FORBIDDEN:**
+- HTTP/HTTPS requests
+- TCP/UDP network connections
+- DNS resolution
+- Email sending
+- Telemetry/analytics
+- Writing to files (except stdout/stderr)
+
+These boundaries are enforced by:
+1. **Static analysis** — Tests verify forbidden packages (`net/http`, `net/rpc`, `net/smtp`) are never imported
+2. **Dependency scanning** — Tests verify no telemetry packages exist in the dependency tree
+
+### CI/CD Hardening
+
+The build pipeline is hardened against supply chain attacks:
+
+- **Network isolation** — All tests run in Docker with `--network=none`, removing the network stack entirely
+- **Minimal permissions** — CI workflows use `contents: read` only
+
+This means even if malicious code were injected via a dependency, it cannot:
+- Phone home to a C2 server
+- Exfiltrate secrets via HTTP, DNS, or raw sockets
+- Upload data anywhere
+
+All network operations fail with "network is unreachable" at the kernel level.
+
 ## Response Timeline
 
 As this is a volunteer-maintained open source project, response times may vary. We will make our best effort to:

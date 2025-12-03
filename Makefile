@@ -35,14 +35,14 @@ help:
 # Build the binary
 build:
 	@echo "Generating repository URL..."
-	@cd src && go generate
+	@cd src && go generate main.go
 	@echo "Building dashlights..."
 	@go build -o dashlights ./src
 
 # Build binaries for all release platforms
 build-all:
 	@echo "Generating repository URL..."
-	@cd src && go generate
+	@cd src && go generate main.go
 	@echo "Building binaries for all release platforms..."
 	@mkdir -p dist
 	@echo "  Building linux/amd64..."
