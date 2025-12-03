@@ -19,9 +19,13 @@ func TestPerformanceThreshold(t *testing.T) {
 	const warmupRuns = 3 // Discard first few runs (macOS code signing overhead)
 
 	// Build the binary first
-	buildCmd := exec.Command("go", "build", "-o", "dashlights_test")
-	if err := buildCmd.Run(); err != nil {
-		t.Fatalf("Failed to build binary: %v", err)
+	// Using -buildvcs=false to avoid VCS errors in network-isolated environments
+	// Build from parent directory (repo root) where go.mod lives
+	buildCmd := exec.Command("go", "build", "-buildvcs=false", "-o", "src/dashlights_test", "./src")
+	buildCmd.Dir = ".."
+	buildOutput, err := buildCmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("Failed to build binary: %v\nOutput: %s", err, buildOutput)
 	}
 	defer exec.Command("rm", "dashlights_test").Run()
 
