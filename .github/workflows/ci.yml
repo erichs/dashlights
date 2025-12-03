@@ -60,16 +60,16 @@ jobs:
           docker run --rm --network=none \
             -v ${{ github.workspace }}:/workspace \
             -v $HOME/go/pkg/mod:/go/pkg/mod:ro \
-            -w /workspace/src \
-            golang:1.22.4 go test -v -coverprofile=coverage.txt -covermode=atomic ./...
+            -w /workspace \
+            golang:1.22.4 go test -v -coverprofile=src/coverage.txt -covermode=atomic ./src/...
 
       - name: Run integration tests
         run: |
           docker run --rm --network=none \
             -v ${{ github.workspace }}:/workspace \
             -v $HOME/go/pkg/mod:/go/pkg/mod:ro \
-            -w /workspace/src \
-            golang:1.22.4 go test -tags=integration -v -run TestPerformanceThreshold .
+            -w /workspace \
+            golang:1.22.4 go test -tags=integration -v -run TestPerformanceThreshold ./src
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
