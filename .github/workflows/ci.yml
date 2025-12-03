@@ -54,17 +54,28 @@ jobs:
       - name: Generate repository URL
         run: cd src && go generate gen_repo_url.go
 
+      # Drop network stack before running tests, harden against supply-chain attacks
       - name: Run tests with coverage
-        run: go test -v -coverprofile=coverage.txt -covermode=atomic ./...
+        run: |
+          docker run --rm --network=none \
+            -v ${{ github.workspace }}:/workspace \
+            -v $HOME/go/pkg/mod:/go/pkg/mod:ro \
+            -w /workspace/src \
+            golang:1.21 go test -v -coverprofile=coverage.txt -covermode=atomic ./...
 
       - name: Run integration tests
-        run: go test -tags=integration -v -run TestPerformanceThreshold ./src
+        run: |
+          docker run --rm --network=none \
+            -v ${{ github.workspace }}:/workspace \
+            -v $HOME/go/pkg/mod:/go/pkg/mod:ro \
+            -w /workspace/src \
+            golang:1.21 go test -tags=integration -v -run TestPerformanceThreshold .
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage.txt
+          files: ./src/coverage.txt
           flags: unittests
           name: codecov-umbrella
           fail_ci_if_error: false
