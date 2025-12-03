@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ main, master ]
 
+# Minimal permissions for security - no write access, no secrets for PR forks
+permissions:
+  contents: read
+
 jobs:
   format-check:
     name: Check Go Formatting
@@ -48,7 +52,7 @@ jobs:
         run: go mod download
 
       - name: Generate repository URL
-        run: cd src && go generate
+        run: cd src && go generate gen_repo_url.go
 
       - name: Run tests with coverage
         run: go test -v -coverprofile=coverage.txt -covermode=atomic ./...
@@ -78,7 +82,7 @@ jobs:
           go-version: '1.21'
 
       - name: Generate repository URL
-        run: cd src && go generate
+        run: cd src && go generate gen_repo_url.go
 
       - name: Build
         run: go build -v -o dashlights ./src
