@@ -22,3 +22,10 @@ This document captures the core design spirit and intent of dashlights.
 - **Not an EDR/protection tool** — Does not block, quarantine, or actively defend
 - **Not a daemon/service** — Stateless, ephemeral execution; runs only when invoked
 
+## Security Design
+
+- **Zero network capabilities** — No `net/http` or network client imports; verified by automated tests
+- **Defense in depth for CI** — Tests run in network-isolated Docker containers (`--network=none`)
+- **Trust boundary** — Can read local files and environment; cannot write files or make network calls
+- **Transparency** — Security capabilities are explicitly documented and tested
+
