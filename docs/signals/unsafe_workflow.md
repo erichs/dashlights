@@ -105,6 +105,9 @@ The following context variables can be controlled by attackers and should never 
 | `github.event.pull_request.head.ref` | Malicious branch name |
 | `github.event.pull_request.head.label` | Malicious label |
 | `github.head_ref` | Malicious branch name |
+| `github.event.commits` | Malicious commit data |
+| `github.event.pages` | Malicious page data |
+| `github.event.pull_request.head.repo.default_branch` | Malicious default branch name |
 
 ## Detection details
 
