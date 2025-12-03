@@ -30,7 +30,8 @@ func TestNoNetworkExfiltration(t *testing.T) {
 
 	// Get all imports including transitive dependencies
 	// Using -deps flag to include all dependencies
-	cmd := exec.Command("go", "list", "-f", "{{.ImportPath}}: {{.Imports}}", "-deps", "./...")
+	// Using -buildvcs=false to avoid VCS errors in network-isolated environments
+	cmd := exec.Command("go", "list", "-buildvcs=false", "-f", "{{.ImportPath}}: {{.Imports}}", "-deps", "./...")
 	cmd.Dir = ".." // Run from repository root
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -60,7 +61,7 @@ func TestNoNetworkExfiltration(t *testing.T) {
 
 	// Also check that only allowed network packages from the 'net' family are used
 	// by looking at what our own code imports
-	cmd = exec.Command("go", "list", "-f", "{{.Imports}}", "./...")
+	cmd = exec.Command("go", "list", "-buildvcs=false", "-f", "{{.Imports}}", "./...")
 	cmd.Dir = ".."
 	output, err = cmd.CombinedOutput()
 	if err != nil {
@@ -110,7 +111,7 @@ func TestNoTelemetry(t *testing.T) {
 		"prometheus/push", // push gateway (pull is fine)
 	}
 
-	cmd := exec.Command("go", "list", "-f", "{{.Deps}}", "./...")
+	cmd := exec.Command("go", "list", "-buildvcs=false", "-f", "{{.Deps}}", "./...")
 	cmd.Dir = ".."
 	output, err := cmd.CombinedOutput()
 	if err != nil {
