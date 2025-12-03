@@ -52,7 +52,7 @@ jobs:
         run: go mod download
 
       - name: Generate repository URL
-        run: cd src && go generate gen_repo_url.go
+        run: cd src && go generate main.go
 
       # Drop network stack before running tests, harden against supply-chain attacks
       - name: Run tests with coverage
@@ -93,7 +93,7 @@ jobs:
           go-version: '1.22.4'
 
       - name: Generate repository URL
-        run: cd src && go generate gen_repo_url.go
+        run: cd src && go generate main.go
 
       - name: Build
         run: go build -v -o dashlights ./src
