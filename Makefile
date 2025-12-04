@@ -94,7 +94,7 @@ coverage:
 	@go tool cover -func=coverage.out | grep total | awk '{print "Total: " $$3}'
 	@echo ""
 	@echo "Signals package coverage:"
-	@go tool cover -func=coverage.out | grep src/signals/ | tail -1 | awk '{print $$1 ": " $$3}'
+	@echo "  Run 'make coverage-signals' for detailed signals-only coverage."
 
 # Generate HTML coverage report
 coverage-html: coverage
