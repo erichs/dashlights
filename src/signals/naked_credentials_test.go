@@ -47,6 +47,7 @@ func TestNakedCredentialsSignal_Remediation(t *testing.T) {
 }
 
 func TestNakedCredentialsSignal_Check_NoSecrets(t *testing.T) {
+	t.Helper()
 	// Save and restore env vars
 	oldAWS := os.Getenv("AWS_SECRET_ACCESS_KEY")
 	oldGithub := os.Getenv("GITHUB_TOKEN")

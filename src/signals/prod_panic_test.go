@@ -40,6 +40,7 @@ func TestProdPanicSignal_Remediation(t *testing.T) {
 }
 
 func TestProdPanicSignal_Check_NoProduction(t *testing.T) {
+	t.Helper()
 	// Save and restore env var
 	oldProfile := os.Getenv("AWS_PROFILE")
 	defer func() {

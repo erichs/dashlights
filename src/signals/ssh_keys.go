@@ -15,27 +15,35 @@ type SSHKeysSignal struct {
 	remediation string
 }
 
+// NewSSHKeysSignal creates an SSHKeysSignal.
 func NewSSHKeysSignal() *SSHKeysSignal {
 	return &SSHKeysSignal{}
 }
 
+// Name returns the human-readable name of the signal.
 func (s *SSHKeysSignal) Name() string {
 	return "Open Door"
 }
 
+// Emoji returns the emoji associated with the signal.
 func (s *SSHKeysSignal) Emoji() string {
 	return "🔑"
 }
 
+// Diagnostic returns a description of the SSH key permission issue.
 func (s *SSHKeysSignal) Diagnostic() string {
 	return s.diagnostic
 }
 
+// Remediation returns guidance on how to correct SSH key permissions.
 func (s *SSHKeysSignal) Remediation() string {
 	return s.remediation
 }
 
+// Check inspects common SSH private keys for overly permissive permissions.
 func (s *SSHKeysSignal) Check(ctx context.Context) bool {
+	_ = ctx
+
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return false

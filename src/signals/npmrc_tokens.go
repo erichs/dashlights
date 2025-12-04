@@ -13,27 +13,35 @@ type NpmrcTokensSignal struct {
 	foundToken string
 }
 
+// NewNpmrcTokensSignal creates an NpmrcTokensSignal.
 func NewNpmrcTokensSignal() Signal {
 	return &NpmrcTokensSignal{}
 }
 
+// Name returns the human-readable name of the signal.
 func (s *NpmrcTokensSignal) Name() string {
 	return "NPM RC Tokens"
 }
 
+// Emoji returns the emoji associated with the signal.
 func (s *NpmrcTokensSignal) Emoji() string {
 	return "📦" // Package (npm)
 }
 
+// Diagnostic returns a description of the detected npm token configuration.
 func (s *NpmrcTokensSignal) Diagnostic() string {
 	return ".npmrc contains auth tokens (should be in ~/.npmrc, not project root)"
 }
 
+// Remediation returns guidance on how to handle npm auth tokens safely.
 func (s *NpmrcTokensSignal) Remediation() string {
 	return "Move .npmrc to ~/.npmrc and add .npmrc to .gitignore"
 }
 
+// Check inspects the project .npmrc for embedded auth tokens.
 func (s *NpmrcTokensSignal) Check(ctx context.Context) bool {
+	_ = ctx
+
 	// Check if .npmrc exists in current directory
 	file, err := os.Open(".npmrc")
 	if err != nil {

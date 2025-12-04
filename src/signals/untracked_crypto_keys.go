@@ -13,18 +13,22 @@ type UntrackedCryptoKeysSignal struct {
 	foundKeys []string
 }
 
+// NewUntrackedCryptoKeysSignal creates an UntrackedCryptoKeysSignal.
 func NewUntrackedCryptoKeysSignal() *UntrackedCryptoKeysSignal {
 	return &UntrackedCryptoKeysSignal{}
 }
 
+// Name returns the human-readable name of the signal.
 func (s *UntrackedCryptoKeysSignal) Name() string {
 	return "Dead Letter"
 }
 
+// Emoji returns the emoji associated with the signal.
 func (s *UntrackedCryptoKeysSignal) Emoji() string {
 	return "🗝️"
 }
 
+// Diagnostic returns a description of the detected untracked crypto keys.
 func (s *UntrackedCryptoKeysSignal) Diagnostic() string {
 	if len(s.foundKeys) == 0 {
 		return "Cryptographic keys found not in .gitignore"
@@ -32,11 +36,15 @@ func (s *UntrackedCryptoKeysSignal) Diagnostic() string {
 	return "Unignored key: " + s.foundKeys[0]
 }
 
+// Remediation returns guidance on how to keep crypto keys out of source control.
 func (s *UntrackedCryptoKeysSignal) Remediation() string {
 	return "Add key files to .gitignore to prevent accidental commit"
 }
 
+// Check searches for key-like files in the current directory that are not ignored by git.
 func (s *UntrackedCryptoKeysSignal) Check(ctx context.Context) bool {
+	_ = ctx
+
 	s.foundKeys = []string{}
 
 	// Key file extensions to look for

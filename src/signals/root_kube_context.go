@@ -14,18 +14,22 @@ type RootKubeContextSignal struct {
 	contextName string
 }
 
+// NewRootKubeContextSignal creates a RootKubeContextSignal.
 func NewRootKubeContextSignal() Signal {
 	return &RootKubeContextSignal{}
 }
 
+// Name returns the human-readable name of the signal.
 func (s *RootKubeContextSignal) Name() string {
 	return "Root Kube Context"
 }
 
+// Emoji returns the emoji associated with the signal.
 func (s *RootKubeContextSignal) Emoji() string {
 	return "☸️" // Kubernetes wheel
 }
 
+// Diagnostic returns a description of the risky Kubernetes context.
 func (s *RootKubeContextSignal) Diagnostic() string {
 	if s.contextName != "" {
 		return "Kubernetes context '" + s.contextName + "' uses kube-system namespace (dangerous for operations)"
@@ -33,10 +37,12 @@ func (s *RootKubeContextSignal) Diagnostic() string {
 	return "Kubernetes context uses kube-system namespace (dangerous for operations)"
 }
 
+// Remediation returns guidance on switching to a safer Kubernetes namespace.
 func (s *RootKubeContextSignal) Remediation() string {
 	return "Switch to a non-system namespace with 'kubectl config set-context --current --namespace=<namespace>'"
 }
 
+// Check parses kubeconfig to see if the current context targets the kube-system namespace.
 func (s *RootKubeContextSignal) Check(ctx context.Context) bool {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {

@@ -1,4 +1,4 @@
-.PHONY: all help build build-all test test-integration fmt fmt-check check-ctx clean install hooks coverage coverage-html coverage-signals gosec install-fabric-pattern release
+.PHONY: all help build build-all test test-integration fmt fmt-check check-ctx clean install hooks coverage coverage-html coverage-signals gosec vet revive install-fabric-pattern release
 
 # Detect Go bin directory portably
 GOBIN := $(shell go env GOBIN)
@@ -7,7 +7,7 @@ ifeq ($(GOBIN),)
 endif
 
 # Default target - format, build, test, and security scan
-all: fmt build build-all test test-integration test-race check-ctx gosec
+all: fmt build build-all test test-integration test-race check-ctx vet revive gosec
 	@echo "✅ All checks passed!"
 
 help:
@@ -73,6 +73,23 @@ test-integration:
 test-race:
 	@echo "Running concurrency race tests..."
 	@go test -race ./...
+
+# Run go vet on the codebase
+vet:
+		@echo "Running go vet..."
+		@go vet ./...
+		@echo "✅ go vet passed"
+
+# Run revive linter
+revive:
+		@echo "Running revive linter..."
+		@if [ ! -f $(GOBIN)/revive ]; then \
+				echo "revive not found. Installing..."; \
+				go install github.com/mgechev/revive@latest; \
+			fi
+		@$(GOBIN)/revive ./...
+		@echo "✅ Revive passed - no issues found!"
+
 
 # Run security scanner with audit mode
 gosec:

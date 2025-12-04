@@ -38,6 +38,7 @@ func TestPermissiveUmaskSignal_Remediation(t *testing.T) {
 }
 
 func TestPermissiveUmaskSignal_Check(t *testing.T) {
+	t.Helper()
 	// Save and restore umask
 	oldUmask := syscall.Umask(0)
 	syscall.Umask(oldUmask)

@@ -13,18 +13,22 @@ type CargoPathDepsSignal struct {
 	foundDep string
 }
 
+// NewCargoPathDepsSignal creates a CargoPathDepsSignal.
 func NewCargoPathDepsSignal() Signal {
 	return &CargoPathDepsSignal{}
 }
 
+// Name returns the human-readable name of the signal.
 func (s *CargoPathDepsSignal) Name() string {
 	return "Cargo Path Dependencies"
 }
 
+// Emoji returns the emoji associated with the signal.
 func (s *CargoPathDepsSignal) Emoji() string {
 	return "🦀" // Crab (Rust)
 }
 
+// Diagnostic returns a description of the detected path dependencies.
 func (s *CargoPathDepsSignal) Diagnostic() string {
 	if s.foundDep != "" {
 		return "Cargo.toml contains path dependency: " + s.foundDep + " (breaks builds on other machines)"
@@ -32,11 +36,15 @@ func (s *CargoPathDepsSignal) Diagnostic() string {
 	return "Cargo.toml contains path dependencies (breaks builds on other machines)"
 }
 
+// Remediation returns guidance on how to replace path dependencies.
 func (s *CargoPathDepsSignal) Remediation() string {
 	return "Replace path dependencies with crates.io versions before committing"
 }
 
+// Check scans Cargo.toml for path dependencies that harm reproducibility.
 func (s *CargoPathDepsSignal) Check(ctx context.Context) bool {
+	_ = ctx
+
 	// Check if Cargo.toml exists in current directory
 	file, err := os.Open("Cargo.toml")
 	if err != nil {

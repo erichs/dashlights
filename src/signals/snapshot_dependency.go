@@ -15,18 +15,22 @@ type SnapshotDependencySignal struct {
 	fileType      string
 }
 
+// NewSnapshotDependencySignal creates a SnapshotDependencySignal.
 func NewSnapshotDependencySignal() Signal {
 	return &SnapshotDependencySignal{}
 }
 
+// Name returns the human-readable name of the signal.
 func (s *SnapshotDependencySignal) Name() string {
 	return "Snapshot Dependency"
 }
 
+// Emoji returns the emoji associated with the signal.
 func (s *SnapshotDependencySignal) Emoji() string {
 	return "☕" // Coffee (Java)
 }
 
+// Diagnostic returns a description of detected SNAPSHOT dependencies.
 func (s *SnapshotDependencySignal) Diagnostic() string {
 	if s.foundSnapshot != "" {
 		return "SNAPSHOT dependency found on release branch: " + s.foundSnapshot
@@ -34,10 +38,12 @@ func (s *SnapshotDependencySignal) Diagnostic() string {
 	return "SNAPSHOT dependencies found on release branch (unstable for production)"
 }
 
+// Remediation returns guidance on replacing SNAPSHOT versions with stable releases.
 func (s *SnapshotDependencySignal) Remediation() string {
 	return "Replace SNAPSHOT versions with stable releases before tagging"
 }
 
+// Check scans Java build files for SNAPSHOT dependencies on release branches/tags.
 func (s *SnapshotDependencySignal) Check(ctx context.Context) bool {
 	// First check if we're on a release branch or tag
 	if !isReleaseContext(ctx) {
@@ -46,8 +52,8 @@ func (s *SnapshotDependencySignal) Check(ctx context.Context) bool {
 	}
 
 	// Check pom.xml (Maven)
-	if hasPomXml() {
-		if s.checkPomXml() {
+	if hasPomXML() {
+		if s.checkPomXML() {
 			s.fileType = "pom.xml"
 			return true
 		}
@@ -216,7 +222,7 @@ func isHeadOnTag(ctx context.Context, headSHA string) bool {
 	return false
 }
 
-func hasPomXml() bool {
+func hasPomXML() bool {
 	_, err := os.Stat("pom.xml")
 	return err == nil
 }
@@ -226,7 +232,7 @@ func hasBuildGradle() bool {
 	return err == nil
 }
 
-func (s *SnapshotDependencySignal) checkPomXml() bool {
+func (s *SnapshotDependencySignal) checkPomXML() bool {
 	file, err := os.Open("pom.xml")
 	if err != nil {
 		return false

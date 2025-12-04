@@ -46,18 +46,22 @@ var untrustedContextPatterns = []string{
 // exprPattern matches ${{ ... }} expressions
 var exprPattern = regexp.MustCompile(`\$\{\{\s*([^}]+)\s*\}\}`)
 
+// NewUnsafeWorkflowSignal creates an UnsafeWorkflowSignal.
 func NewUnsafeWorkflowSignal() Signal {
 	return &UnsafeWorkflowSignal{}
 }
 
+// Name returns the human-readable name of the signal.
 func (s *UnsafeWorkflowSignal) Name() string {
 	return "Unsafe Workflow"
 }
 
+// Emoji returns the emoji associated with the signal.
 func (s *UnsafeWorkflowSignal) Emoji() string {
 	return "🎬"
 }
 
+// Diagnostic returns a description of detected GitHub Actions workflow issues.
 func (s *UnsafeWorkflowSignal) Diagnostic() string {
 	var parts []string
 	if len(s.pwnRequestFiles) > 0 {
@@ -73,6 +77,7 @@ func (s *UnsafeWorkflowSignal) Diagnostic() string {
 	return "GitHub Actions workflow contains security vulnerabilities"
 }
 
+// Remediation returns guidance on how to fix unsafe workflow patterns.
 func (s *UnsafeWorkflowSignal) Remediation() string {
 	if len(s.pwnRequestFiles) > 0 && len(s.exprInjections) > 0 {
 		return "Use pull_request trigger instead of pull_request_target; set untrusted inputs to env: variables before using in run: blocks"
@@ -83,6 +88,7 @@ func (s *UnsafeWorkflowSignal) Remediation() string {
 	return "Set untrusted inputs to env: variables before using in run: blocks"
 }
 
+// Check scans GitHub Actions workflows for pwn request and expression injection vulnerabilities.
 func (s *UnsafeWorkflowSignal) Check(ctx context.Context) bool {
 	workflowsDir := ".github/workflows"
 

@@ -12,18 +12,22 @@ type PyCachePollutionSignal struct {
 	foundDirs []string
 }
 
+// NewPyCachePollutionSignal creates a PyCachePollutionSignal.
 func NewPyCachePollutionSignal() Signal {
 	return &PyCachePollutionSignal{}
 }
 
+// Name returns the human-readable name of the signal.
 func (s *PyCachePollutionSignal) Name() string {
 	return "PyCache Pollution"
 }
 
+// Emoji returns the emoji associated with the signal.
 func (s *PyCachePollutionSignal) Emoji() string {
 	return "🐍" // Snake (Python)
 }
 
+// Diagnostic returns a description of detected __pycache__ directories.
 func (s *PyCachePollutionSignal) Diagnostic() string {
 	if len(s.foundDirs) > 0 {
 		return "__pycache__ directories found (not properly ignored in git)"
@@ -31,10 +35,12 @@ func (s *PyCachePollutionSignal) Diagnostic() string {
 	return "__pycache__ directories found (not properly ignored)"
 }
 
+// Remediation returns guidance on ignoring __pycache__ directories.
 func (s *PyCachePollutionSignal) Remediation() string {
 	return "Add __pycache__/ to .gitignore and run: git rm -r --cached __pycache__"
 }
 
+// Check walks the repository for tracked __pycache__ directories.
 func (s *PyCachePollutionSignal) Check(ctx context.Context) bool {
 	s.foundDirs = []string{}
 

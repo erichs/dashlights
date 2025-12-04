@@ -20,7 +20,7 @@ func TestConcurrentCheckAll(t *testing.T) {
 	// Launch multiple concurrent CheckAll executions
 	for i := 0; i < numConcurrent; i++ {
 		wg.Add(1)
-		go func(iteration int) {
+		go func(_ int) {
 			defer wg.Done()
 
 			// Each execution gets fresh signals

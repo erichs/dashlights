@@ -21,18 +21,22 @@ type InsecureCurlPipeSignal struct {
 
 var curlPipePattern = regexp.MustCompile(`(?i)\bcurl\b[^|]*\|\s*(sudo\s+)?(bash|sh)\b`)
 
+// NewInsecureCurlPipeSignal creates an InsecureCurlPipeSignal.
 func NewInsecureCurlPipeSignal() Signal {
 	return &InsecureCurlPipeSignal{}
 }
 
+// Name returns the human-readable name of the signal.
 func (s *InsecureCurlPipeSignal) Name() string {
 	return "Insecure Curl Pipe"
 }
 
+// Emoji returns the emoji associated with the signal.
 func (s *InsecureCurlPipeSignal) Emoji() string {
 	return "⚠️"
 }
 
+// Diagnostic returns a description of the detected insecure curl pipe usage.
 func (s *InsecureCurlPipeSignal) Diagnostic() string {
 	if s.reason != "" {
 		return s.reason
@@ -40,10 +44,12 @@ func (s *InsecureCurlPipeSignal) Diagnostic() string {
 	return "Recent shell history contains insecure curl | bash or curl | sh execution"
 }
 
+// Remediation returns guidance on safer alternatives to curl piping into shells.
 func (s *InsecureCurlPipeSignal) Remediation() string {
 	return "Avoid piping curl directly into bash/sh; use checksum.sh or download-inspect-execute instead"
 }
 
+// Check inspects recent shell history for insecure curl pipe patterns.
 func (s *InsecureCurlPipeSignal) Check(ctx context.Context) bool {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {

@@ -11,18 +11,22 @@ type NakedCredentialsSignal struct {
 	foundVars []string
 }
 
+// NewNakedCredentialsSignal creates a NakedCredentialsSignal.
 func NewNakedCredentialsSignal() *NakedCredentialsSignal {
 	return &NakedCredentialsSignal{}
 }
 
+// Name returns the human-readable name of the signal.
 func (s *NakedCredentialsSignal) Name() string {
 	return "Naked Credential"
 }
 
+// Emoji returns the emoji associated with the signal.
 func (s *NakedCredentialsSignal) Emoji() string {
 	return "🩲"
 }
 
+// Diagnostic returns a description of the detected naked credentials.
 func (s *NakedCredentialsSignal) Diagnostic() string {
 	if len(s.foundVars) == 0 {
 		return "Raw secrets detected in environment variables"
@@ -30,11 +34,15 @@ func (s *NakedCredentialsSignal) Diagnostic() string {
 	return "Raw secrets in environment: " + strings.Join(s.foundVars, ", ")
 }
 
+// Remediation returns guidance on how to handle naked credentials.
 func (s *NakedCredentialsSignal) Remediation() string {
 	return "Use 1Password (op://), dotenvx (encrypted:), or other secret management tools"
 }
 
+// Check scans environment variables for values that look like raw secrets.
 func (s *NakedCredentialsSignal) Check(ctx context.Context) bool {
+	_ = ctx
+
 	s.foundVars = []string{}
 
 	// Patterns that indicate secrets

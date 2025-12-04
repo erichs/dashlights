@@ -15,18 +15,22 @@ type MissingGitHooksSignal struct {
 	foundIntent string
 }
 
+// NewMissingGitHooksSignal creates a MissingGitHooksSignal.
 func NewMissingGitHooksSignal() Signal {
 	return &MissingGitHooksSignal{}
 }
 
+// Name returns the human-readable name of the signal.
 func (s *MissingGitHooksSignal) Name() string {
 	return "Missing Git Hooks"
 }
 
+// Emoji returns the emoji associated with the signal.
 func (s *MissingGitHooksSignal) Emoji() string {
 	return "⚓" // Anchor emoji - hooks should anchor your commits
 }
 
+// Diagnostic returns details about missing git hooks.
 func (s *MissingGitHooksSignal) Diagnostic() string {
 	if s.foundIntent != "" {
 		return "Git hooks not installed (found " + s.foundIntent + " but no hooks in hooks directory)"
@@ -34,10 +38,12 @@ func (s *MissingGitHooksSignal) Diagnostic() string {
 	return "Git hooks not installed despite hook manager configuration present"
 }
 
+// Remediation returns guidance on installing configured git hooks.
 func (s *MissingGitHooksSignal) Remediation() string {
 	return "Run the hook installer: npm install, pre-commit install, lefthook install, or copy hooks from .githooks/"
 }
 
+// Check looks for hook configuration without corresponding installed hooks.
 func (s *MissingGitHooksSignal) Check(ctx context.Context) bool {
 	// Check context cancellation early
 	select {
@@ -136,11 +142,7 @@ func isValidHooksPath(path string) bool {
 
 	// Clean the path and check again
 	cleaned := filepath.Clean(path)
-	if strings.Contains(cleaned, "..") {
-		return false
-	}
-
-	return true
+	return !strings.Contains(cleaned, "..")
 }
 
 // hasInstalledHooks checks if any standard git hooks exist in the given directory

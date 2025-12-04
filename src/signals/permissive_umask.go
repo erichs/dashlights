@@ -19,27 +19,35 @@ type PermissiveUmaskSignal struct {
 	currentUmask int
 }
 
+// NewPermissiveUmaskSignal creates a PermissiveUmaskSignal.
 func NewPermissiveUmaskSignal() *PermissiveUmaskSignal {
 	return &PermissiveUmaskSignal{}
 }
 
+// Name returns the human-readable name of the signal.
 func (s *PermissiveUmaskSignal) Name() string {
 	return "Loose Cannon"
 }
 
+// Emoji returns the emoji associated with the signal.
 func (s *PermissiveUmaskSignal) Emoji() string {
 	return "😷"
 }
 
+// Diagnostic returns a description of the detected umask setting.
 func (s *PermissiveUmaskSignal) Diagnostic() string {
 	return "Permissive umask detected: " + formatUmask(s.currentUmask)
 }
 
+// Remediation returns guidance on how to harden the umask.
 func (s *PermissiveUmaskSignal) Remediation() string {
 	return "Set umask to 0022 or 0027 for better security"
 }
 
+// Check evaluates the current umask and reports if it is overly permissive.
 func (s *PermissiveUmaskSignal) Check(ctx context.Context) bool {
+	_ = ctx
+
 	// Serialize umask checks to prevent race conditions across concurrent goroutines.
 	// syscall.Umask() modifies process-wide state, so we must ensure only one
 	// goroutine accesses it at a time.

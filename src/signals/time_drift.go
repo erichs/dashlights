@@ -10,27 +10,40 @@ import (
 // This can indicate desynchronized network drives or VMs with clock drift
 type TimeDriftSignal struct{}
 
+// NewTimeDriftSignal creates a TimeDriftSignal.
 func NewTimeDriftSignal() Signal {
 	return &TimeDriftSignal{}
 }
 
+// Name returns the human-readable name of the signal.
 func (s *TimeDriftSignal) Name() string {
 	return "Time Drift Detected"
 }
 
+// Emoji returns the emoji associated with the signal.
 func (s *TimeDriftSignal) Emoji() string {
 	return "⏰" // Alarm clock emoji
 }
 
+// Diagnostic returns a description of detected time drift.
 func (s *TimeDriftSignal) Diagnostic() string {
 	return "System time and filesystem time are out of sync (network drive or VM clock drift)"
 }
 
+// Remediation returns guidance on fixing system time drift.
 func (s *TimeDriftSignal) Remediation() string {
 	return "Check NTP sync, VM time sync settings, or network drive mount options"
 }
 
+// Check measures drift between system time and filesystem modification time.
 func (s *TimeDriftSignal) Check(ctx context.Context) bool {
+	// Respect context cancellation before performing filesystem operations.
+	select {
+	case <-ctx.Done():
+		return false
+	default:
+	}
+
 	// Create a temporary file with a unique name to avoid collisions when
 	// multiple instances run concurrently. We use CreateTemp with a pattern
 	// to ensure uniqueness while keeping the file in the current directory.
@@ -47,11 +60,11 @@ func (s *TimeDriftSignal) Check(ctx context.Context) bool {
 
 	// Close the file and check for errors
 	if err := f.Close(); err != nil {
-		// If close fails, still try to clean up the file
-		// We're already in an error path, so we do best-effort cleanup
+		// If close fails, still try to clean up the file. We're already in
+		// an error path, so we do best-effort cleanup and explicitly ignore
+		// any error from os.Remove.
 		if removeErr := os.Remove(tmpFile); removeErr != nil {
-			// Cleanup failed, but we're already returning false due to close error
-			// Nothing more we can do here
+			_ = removeErr
 		}
 		return false
 	}

@@ -1,3 +1,4 @@
+// Package signals defines security signal implementations used by dashlights.
 package signals
 
 import (
@@ -12,26 +13,32 @@ import (
 // that override core AWS commands, which could indicate command injection attacks
 type AWSAliasHijackSignal struct{}
 
+// NewAWSAliasHijackSignal creates an AWSAliasHijackSignal.
 func NewAWSAliasHijackSignal() Signal {
 	return &AWSAliasHijackSignal{}
 }
 
+// Name returns the human-readable name of the signal.
 func (s *AWSAliasHijackSignal) Name() string {
 	return "AWS CLI Alias Hijacking"
 }
 
+// Emoji returns the emoji associated with the signal.
 func (s *AWSAliasHijackSignal) Emoji() string {
 	return "🪝" // Hook emoji - represents hijacking
 }
 
+// Diagnostic returns a description of the detected AWS CLI alias issues.
 func (s *AWSAliasHijackSignal) Diagnostic() string {
 	return "AWS CLI aliases override core commands or have insecure permissions"
 }
 
+// Remediation returns guidance on reviewing and hardening AWS CLI aliases.
 func (s *AWSAliasHijackSignal) Remediation() string {
 	return "Review ~/.aws/cli/alias for suspicious overrides and set permissions to 0600"
 }
 
+// Check inspects the AWS CLI alias file for dangerous overrides or permissions issues.
 func (s *AWSAliasHijackSignal) Check(ctx context.Context) bool {
 	// Core AWS commands that should never be aliased (potential hijacking)
 	coreCommands := map[string]bool{
