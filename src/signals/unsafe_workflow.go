@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/erichs/dashlights/src/signals/internal/pathsec"
 	"gopkg.in/yaml.v3"
 )
 
@@ -123,11 +124,11 @@ func (s *UnsafeWorkflowSignal) Check(ctx context.Context) bool {
 			continue
 		}
 
-		if strings.Contains(name, "..") || strings.Contains(name, "/") {
+		if !pathsec.IsSafeName(name) {
 			continue
 		}
 
-		filePath, err := safeJoinPath(absWorkflowsDir, name)
+		filePath, err := pathsec.SafeJoinPath(absWorkflowsDir, name)
 		if err != nil {
 			continue
 		}
@@ -140,29 +141,6 @@ func (s *UnsafeWorkflowSignal) Check(ctx context.Context) bool {
 
 func (s *UnsafeWorkflowSignal) hasFindings() bool {
 	return len(s.pwnRequestFiles) > 0 || len(s.exprInjections) > 0
-}
-
-// safeJoinPath safely joins a base directory and filename, ensuring the result
-// stays within the base directory (prevents directory traversal attacks - G304)
-func safeJoinPath(baseDir, filename string) (string, error) {
-	// Clean the filename
-	filename = filepath.Clean(filename)
-
-	// Reject any path components
-	if strings.ContainsAny(filename, `/\`) || filename == ".." || strings.HasPrefix(filename, "..") {
-		return "", os.ErrInvalid
-	}
-
-	// Join and clean the full path
-	fullPath := filepath.Join(baseDir, filename)
-	fullPath = filepath.Clean(fullPath)
-
-	// Verify the result is still within the base directory
-	if !strings.HasPrefix(fullPath, baseDir+string(filepath.Separator)) && fullPath != baseDir {
-		return "", os.ErrInvalid
-	}
-
-	return fullPath, nil
 }
 
 func (s *UnsafeWorkflowSignal) checkWorkflowFile(ctx context.Context, filePath, name string) {

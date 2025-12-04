@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/erichs/dashlights/src/signals/internal/homedirutil"
 )
 
 // RootKubeContextSignal checks if current Kubernetes context namespace is kube-system
@@ -44,27 +46,13 @@ func (s *RootKubeContextSignal) Remediation() string {
 
 // Check parses kubeconfig to see if the current context targets the kube-system namespace.
 func (s *RootKubeContextSignal) Check(ctx context.Context) bool {
-	homeDir, err := os.UserHomeDir()
+	kubeConfig, err := homedirutil.SafeHomePath(".kube", "config")
 	if err != nil {
 		return false
 	}
 
-	// Sanitize home directory to prevent directory traversal attacks
-	// Validate that homeDir doesn't contain suspicious patterns
-	if strings.Contains(homeDir, "..") {
-		return false
-	}
-
-	// Clean the path to resolve any . or .. components
-	sanitizedHome := filepath.Clean(homeDir)
-
-	// Ensure the sanitized path is absolute (home directories should always be absolute)
-	if !filepath.IsAbs(sanitizedHome) {
-		return false
-	}
-
-	kubeConfig := filepath.Join(sanitizedHome, ".kube", "config")
-	file, err := os.Open(kubeConfig)
+	// filepath.Clean for gosec G304 - path is already validated by SafeHomePath
+	file, err := os.Open(filepath.Clean(kubeConfig))
 	if err != nil {
 		// No kube config - not using Kubernetes
 		return false

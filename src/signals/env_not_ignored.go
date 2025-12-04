@@ -1,10 +1,10 @@
 package signals
 
 import (
-	"bufio"
 	"context"
 	"os"
-	"strings"
+
+	"github.com/erichs/dashlights/src/signals/internal/gitutil"
 )
 
 // EnvNotIgnoredSignal checks if .env exists but isn't in .gitignore
@@ -44,26 +44,9 @@ func (s *EnvNotIgnoredSignal) Check(ctx context.Context) bool {
 		return false
 	}
 
-	// Check if .gitignore exists
-	gitignoreFile, err := os.Open(".gitignore")
-	if err != nil {
-		// .gitignore doesn't exist, so .env is not ignored
-		return true
-	}
-	defer gitignoreFile.Close()
-
-	// Check if .env is in .gitignore
-	scanner := bufio.NewScanner(gitignoreFile)
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		// Skip comments and empty lines
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-		// Check for exact match or pattern match
-		if line == ".env" || line == "*.env" || strings.Contains(line, ".env") {
-			return false // .env is ignored, no problem
-		}
+	// Check if .gitignore exists and contains .env
+	if gitutil.IsIgnored(".env") {
+		return false // .env is ignored, no problem
 	}
 
 	// .env exists but is not in .gitignore

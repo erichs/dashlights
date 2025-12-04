@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/erichs/dashlights/src/signals/internal/pathsec"
 )
 
 func TestUnsafeWorkflowSignal_Name(t *testing.T) {
@@ -452,7 +454,7 @@ func TestUnsafeWorkflowSignal_Performance(t *testing.T) {
 
 func TestSafeJoinPath_ValidFilename(t *testing.T) {
 	baseDir := "/tmp/test"
-	result, err := safeJoinPath(baseDir, "workflow.yml")
+	result, err := pathsec.SafeJoinPath(baseDir, "workflow.yml")
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
@@ -475,7 +477,7 @@ func TestSafeJoinPath_DirectoryTraversal(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := safeJoinPath("/tmp/base", tc.filename)
+			_, err := pathsec.SafeJoinPath("/tmp/base", tc.filename)
 			if err == nil {
 				t.Errorf("Expected error for filename %q, got nil", tc.filename)
 			}
@@ -488,7 +490,7 @@ func TestSafeJoinPath_PathEscape(t *testing.T) {
 	// This tests the prefix check logic
 	baseDir := "/tmp/base"
 	// After filepath.Clean, this would be just the filename
-	result, err := safeJoinPath(baseDir, "safe.yml")
+	result, err := pathsec.SafeJoinPath(baseDir, "safe.yml")
 	if err != nil {
 		t.Errorf("Expected no error for safe filename, got %v", err)
 	}
@@ -1478,7 +1480,7 @@ func TestSafeJoinPath_PrefixEscape(t *testing.T) {
 	baseDir := "/tmp/base"
 
 	// Valid case - should work
-	result, err := safeJoinPath(baseDir, "file.yml")
+	result, err := pathsec.SafeJoinPath(baseDir, "file.yml")
 	if err != nil {
 		t.Errorf("Expected no error for valid filename, got %v", err)
 	}

@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/erichs/dashlights/src/signals/internal/homedirutil"
 )
 
 // AWSAliasHijackSignal detects potentially malicious AWS CLI aliases
@@ -63,29 +65,14 @@ func (s *AWSAliasHijackSignal) Check(ctx context.Context) bool {
 		"sts":            true,
 	}
 
-	homeDir, err := os.UserHomeDir()
+	aliasPath, err := homedirutil.SafeHomePath(".aws", "cli", "alias")
 	if err != nil {
 		return false
 	}
 
-	// Sanitize home directory to prevent directory traversal attacks
-	// Validate that homeDir doesn't contain suspicious patterns
-	if strings.Contains(homeDir, "..") {
-		return false
-	}
-
-	// Clean the path to resolve any . or .. components
-	sanitizedHome := filepath.Clean(homeDir)
-
-	// Ensure the sanitized path is absolute (home directories should always be absolute)
-	if !filepath.IsAbs(sanitizedHome) {
-		return false
-	}
-
-	aliasPath := filepath.Join(sanitizedHome, ".aws", "cli", "alias")
-
 	// Check if alias file exists
-	fileInfo, err := os.Stat(aliasPath)
+	// filepath.Clean for gosec G304 - path is already validated by SafeHomePath
+	fileInfo, err := os.Stat(filepath.Clean(aliasPath))
 	if err != nil {
 		// File doesn't exist - no issue
 		if os.IsNotExist(err) {
@@ -101,7 +88,8 @@ func (s *AWSAliasHijackSignal) Check(ctx context.Context) bool {
 	}
 
 	// Parse alias file for suspicious aliases
-	file, err := os.Open(aliasPath)
+	// filepath.Clean for gosec G304 - path is already validated by SafeHomePath
+	file, err := os.Open(filepath.Clean(aliasPath))
 	if err != nil {
 		return false
 	}

@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/erichs/dashlights/src/signals/internal/pathsec"
 )
 
 // InsecureCurlPipeSignal detects insecure `curl | bash` or `curl | sh` usage
@@ -68,20 +70,14 @@ func (s *InsecureCurlPipeSignal) Check(ctx context.Context) bool {
 
 	historyFileName := "." + shellName + "_history"
 
-	// Validate the history filename to avoid directory traversal (G304)
-	if strings.ContainsAny(historyFileName, `/\\`) || strings.Contains(historyFileName, "..") {
+	// Use pathsec to safely join home directory and history filename
+	historyFile, err := pathsec.SafeJoinPath(homeDir, historyFileName)
+	if err != nil {
 		return false
 	}
 
-	historyFile := filepath.Join(homeDir, historyFileName)
-	historyFile = filepath.Clean(historyFile)
-
-	// Ensure the resolved path remains within the user's home directory.
-	if !strings.HasPrefix(historyFile, homeDir+string(filepath.Separator)) && historyFile != homeDir {
-		return false
-	}
-
-	file, err := os.Open(historyFile)
+	// filepath.Clean for gosec G304 - path is already validated by SafeJoinPath
+	file, err := os.Open(filepath.Clean(historyFile))
 	if err != nil {
 		return false
 	}

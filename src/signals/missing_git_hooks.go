@@ -4,8 +4,9 @@ import (
 	"bufio"
 	"context"
 	"os"
-	"path/filepath"
 	"strings"
+
+	"github.com/erichs/dashlights/src/signals/internal/pathsec"
 )
 
 // MissingGitHooksSignal detects when a repository has hook intent (config files
@@ -118,7 +119,7 @@ func getHooksPath() string {
 			if len(parts) == 2 {
 				path := strings.TrimSpace(parts[1])
 				// Validate the path doesn't contain directory traversal
-				if !isValidHooksPath(path) {
+				if !pathsec.IsValidPath(path) {
 					return ".git/hooks"
 				}
 				return path
@@ -127,22 +128,6 @@ func getHooksPath() string {
 	}
 
 	return ".git/hooks"
-}
-
-// isValidHooksPath validates that a hooks path is safe to use
-func isValidHooksPath(path string) bool {
-	if path == "" {
-		return false
-	}
-
-	// Check for directory traversal attempts
-	if strings.Contains(path, "..") {
-		return false
-	}
-
-	// Clean the path and check again
-	cleaned := filepath.Clean(path)
-	return !strings.Contains(cleaned, "..")
 }
 
 // hasInstalledHooks checks if any standard git hooks exist in the given directory

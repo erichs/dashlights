@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/erichs/dashlights/src/signals/internal/pathsec"
 )
 
 func TestMissingGitHooksSignal_NoGitDirectory(t *testing.T) {
@@ -423,9 +425,9 @@ func TestIsValidHooksPath(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.path, func(t *testing.T) {
-			result := isValidHooksPath(tc.path)
+			result := pathsec.IsValidPath(tc.path)
 			if result != tc.valid {
-				t.Errorf("isValidHooksPath(%q) = %v, want %v", tc.path, result, tc.valid)
+				t.Errorf("pathsec.IsValidPath(%q) = %v, want %v", tc.path, result, tc.valid)
 			}
 		})
 	}
