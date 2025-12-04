@@ -94,10 +94,26 @@ func (s *PrivilegedPathSignal) Check(ctx context.Context) bool {
 			continue
 		}
 
+		// Track if this entry was already reported as world-writable to avoid
+		// emitting a second, redundant finding for the same path as a user bin.
+		worldWritable := false
+
 		// World-writable PATH entries: any directory with the others-write bit set
 		if fi, err := os.Stat(p); err == nil && fi.IsDir() {
 			perm := fi.Mode().Perm()
 			if perm&0o002 != 0 {
+				worldWritable = true
+				// If this is also a known user bin directory that appears before
+				// system paths, report a single combined finding instead of two
+				// separate messages.
+				if earliestSystemIdx != -1 && i < earliestSystemIdx {
+					if label, ok := userBinDirs[p]; ok {
+						s.findings = append(s.findings,
+							fmt.Sprintf("World-writable user PATH directory %s appears before system directories: %s (mode %04o)", label, p, perm))
+						continue
+					}
+				}
+				// Fallback: generic world-writable PATH entry message.
 				s.findings = append(s.findings,
 					fmt.Sprintf("World-writable PATH entry: %s (mode %04o)", p, perm))
 			}
@@ -105,8 +121,9 @@ func (s *PrivilegedPathSignal) Check(ctx context.Context) bool {
 
 		// User-writable PATH entries that precede system directories: common user
 		// bin directories (e.g., $HOME/bin, $GOPATH/bin, ~/.cargo/bin) appearing
-		// before /usr/bin, /sbin, or /bin.
-		if earliestSystemIdx != -1 && i < earliestSystemIdx {
+		// before /usr/bin, /sbin, or /bin. If we've already emitted a
+		// world-writable finding for this path, skip adding a second message.
+		if !worldWritable && earliestSystemIdx != -1 && i < earliestSystemIdx {
 			if label, ok := userBinDirs[p]; ok {
 				s.findings = append(s.findings,
 					fmt.Sprintf("User PATH directory %s appears before system directories", label))
@@ -126,7 +143,7 @@ func buildUserBinDirMap() map[string]string {
 	if home != "" {
 		result[filepath.Join(home, "bin")] = "$HOME/bin"
 		result[filepath.Join(home, ".local", "bin")] = "$HOME/.local/bin"
-		result[filepath.Join(home, ".cargo", "bin")] = "~/.cargo/bin"
+		result[filepath.Join(home, ".cargo", "bin")] = "$HOME/.cargo/bin"
 	}
 
 	// GOPATH may contain multiple entries separated by the OS path list separator.
