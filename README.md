@@ -43,7 +43,7 @@ $ dashlights --details
 
 ### Security Checks
 
-Dashlights performs **34 concurrent security checks** across five categories: Identity & Access Management, Operational Security, Repository Hygiene, System Health, and Infrastructure Security.
+Dashlights performs **35 concurrent security checks** across five categories: Identity & Access Management, Operational Security, Repository Hygiene, System Health, and Infrastructure Security.
 
 👉 **[View the complete list of security signals →](SIGNALS.md)**
 
@@ -64,11 +64,8 @@ NOTE: 1.0.0-alpha is available, check out the [releases](https://github.com/eric
 [eget](https://github.com/zyedidia/eget) makes it easy to install pre-built binaries from GitHub releases:
 
 ```shell
-# Install eget first (if you don't have it)
-curl https://zyedidia.github.io/eget.sh | sh
-
 # Install dashlights
-eget erichs/dashlights
+eget erichs/dashlights --pre-release
 ```
 
 ### Manual download from releases
