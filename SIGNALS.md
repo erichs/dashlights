@@ -10,7 +10,7 @@ Dashlights performs over 30 concurrent security checks, organized into five cate
 ## Operational Security (OpSec)
 
 3. 👑 **[Danger Zone](docs/signals/root_login.md)** - Detects when running as root user (UID 0) [[code](src/signals/root_login.go)]
-4. 💣 **[Privileged Path](docs/signals/privileged_path.md)** - Detects current directory (`.`) in PATH [[code](src/signals/privileged_path.go)]
+4. 💣 **[Privileged Path](docs/signals/privileged_path.md)** - Detects dangerous PATH entries like current directory (`.`), world-writable directories, or user bin directories before system paths [[code](src/signals/privileged_path.go)]
 5. 🐴 **[Trojan Horse](docs/signals/ld_preload.md)** - Checks for LD_PRELOAD/DYLD_INSERT_LIBRARIES (rootkit vector) [[code](src/signals/ld_preload.go)]
 6. 🕶️ **[Blind Spot](docs/signals/history_disabled.md)** - Detects disabled shell history [[code](src/signals/history_disabled.go)]
 7. 🚨 **[Prod Panic](docs/signals/prod_panic.md)** - Alerts when kubectl/AWS context points to production [[code](src/signals/prod_panic.go)]

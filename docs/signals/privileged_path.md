@@ -2,13 +2,12 @@
 
 ## What this is
 
-This signal detects when your `PATH` environment variable includes directories that are writable by other users (world-writable or group-writable). This is a security risk because attackers can place malicious executables in these directories, and when you run a command, the malicious version executes instead of the legitimate one.
+This signal detects dangerous entries in your `PATH` environment variable, including:
+- world-writable directories (where any user can write files)
+- the current directory (`.`) or empty PATH segments that imply the current directory
+- user-specific bin directories (like `$HOME/bin`, `$HOME/.local/bin`, `$GOPATH/bin`, or `~/.cargo/bin`) that appear *before* system directories such as `/usr/bin` or `/bin`
 
-Common problematic paths:
-- `/tmp` - World-writable temporary directory
-- `/var/tmp` - World-writable temporary directory
-- Current directory (`.`) - Can be manipulated by attackers
-- Any directory with permissions 777, 775, or 755 owned by another user
+These patterns are risky because attackers can place malicious executables in these directories, and when you run a command, the malicious version executes instead of the legitimate one.
 
 ## Why this matters
 
@@ -94,7 +93,7 @@ source ~/.bashrc  # or ~/.zshrc
 
 ### Set a secure PATH
 
-**Recommended PATH** (in order of precedence):
+**Recommended PATH** (system directories first, then user bins):
 ```bash
 # In ~/.bashrc or ~/.zshrc
 export PATH="/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin"
@@ -102,13 +101,13 @@ export PATH="/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin"
 # Add user-specific bin directory (if it exists and is secure)
 if [ -d "$HOME/bin" ]; then
   chmod 700 "$HOME/bin"  # Ensure it's not writable by others
-  export PATH="$HOME/bin:$PATH"
+  export PATH="$PATH:$HOME/bin"
 fi
 
 # Add user-local bin directory
 if [ -d "$HOME/.local/bin" ]; then
   chmod 700 "$HOME/.local/bin"
-  export PATH="$HOME/.local/bin:$PATH"
+  export PATH="$PATH:$HOME/.local/bin"
 fi
 ```
 
@@ -137,7 +136,7 @@ fi
 # Add user bin
 if [ -d "$HOME/bin" ]; then
   chmod 700 "$HOME/bin"
-  export PATH="$HOME/bin:$PATH"
+  export PATH="$PATH:$HOME/bin"
 fi
 
 # Add to ~/.zshrc (default shell on macOS)
@@ -152,7 +151,7 @@ export PATH="/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin"
 # Add user bin
 if [ -d "$HOME/.local/bin" ]; then
   chmod 700 "$HOME/.local/bin"
-  export PATH="$HOME/.local/bin:$PATH"
+  export PATH="$PATH:$HOME/.local/bin"
 fi
 
 # Add to ~/.bashrc
@@ -204,10 +203,10 @@ ls -ld ~/bin ~/.local/bin
    export PATH="/var/tmp:$PATH"
    ```
 
-3. **Order PATH from most to least trusted**:
+3. **Order PATH from most to least trusted (system directories first, then user bins)**:
    ```bash
-   # Most trusted first
-   export PATH="$HOME/bin:/usr/local/bin:/usr/bin:/bin"
+   # System directories first, then user bin
+   export PATH="/usr/local/bin:/usr/bin:/bin:$HOME/bin"
    ```
 
 4. **Use absolute paths** for critical commands in scripts:
