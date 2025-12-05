@@ -105,7 +105,6 @@ func (s *RootKubeContextSignal) Check(ctx context.Context) bool {
 		// Start of a new context entry (- context: or - name:)
 		if strings.HasPrefix(trimmed, "- context:") || strings.HasPrefix(trimmed, "- name:") {
 			inContextEntry = true
-			contextName = ""
 			contextNamespace = ""
 		}
 

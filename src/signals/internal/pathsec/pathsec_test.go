@@ -3,6 +3,7 @@ package pathsec
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -87,7 +88,7 @@ func TestSafeJoinPath(t *testing.T) {
 
 			if tt.checkPath {
 				// Verify path is within base directory
-				if !filepath.HasPrefix(path, tt.baseDir) {
+				if !strings.HasPrefix(path, tt.baseDir) {
 					t.Errorf("SafeJoinPath() path %q not within base %q", path, tt.baseDir)
 				}
 			}
