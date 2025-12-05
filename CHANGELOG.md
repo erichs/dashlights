@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0-alpha.7] - 2025-12-04
 
 ### Added
-- Added InsecureCurlPipe signal to detect insecure use of curl pipes
+- Added InsecureCurlPipe signal to detect insecure use of curl | bash
 
 ### Changed
 - Improved PrivilegedPath signal checks for better accuracy
