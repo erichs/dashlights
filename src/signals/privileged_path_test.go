@@ -127,8 +127,12 @@ func TestPrivilegedPathSignal_Check_DotInPath(t *testing.T) {
 	oldPath := os.Getenv("PATH")
 	defer os.Setenv("PATH", oldPath)
 
-	// Set PATH with '.'
-	os.Setenv("PATH", "/usr/bin:.:/usr/local/bin")
+	// Create temp directories with safe permissions to avoid world-writable warnings
+	safeDir1 := t.TempDir()
+	safeDir2 := t.TempDir()
+
+	// Set PATH with '.' and safe directories only
+	os.Setenv("PATH", safeDir1+":."+string(os.PathListSeparator)+safeDir2)
 
 	signal := NewPrivilegedPathSignal()
 	ctx := context.Background()
@@ -152,8 +156,12 @@ func TestPrivilegedPathSignal_Check_EmptyEntry(t *testing.T) {
 	oldPath := os.Getenv("PATH")
 	defer os.Setenv("PATH", oldPath)
 
-	// Set PATH with empty entry (::)
-	os.Setenv("PATH", "/usr/bin::/usr/local/bin")
+	// Create temp directories with safe permissions to avoid world-writable warnings
+	safeDir1 := t.TempDir()
+	safeDir2 := t.TempDir()
+
+	// Set PATH with empty entry (::) and safe directories only
+	os.Setenv("PATH", safeDir1+"::"+safeDir2)
 
 	signal := NewPrivilegedPathSignal()
 	ctx := context.Background()
@@ -177,14 +185,19 @@ func TestPrivilegedPathSignal_Check_SafePath(t *testing.T) {
 	oldPath := os.Getenv("PATH")
 	defer os.Setenv("PATH", oldPath)
 
-	// Set safe PATH without '.'
-	os.Setenv("PATH", "/usr/bin:/usr/local/bin:/bin")
+	// Create temp directories with safe permissions
+	safeDir1 := t.TempDir()
+	safeDir2 := t.TempDir()
+	safeDir3 := t.TempDir()
+
+	// Set safe PATH using only temp directories (which have safe permissions)
+	os.Setenv("PATH", strings.Join([]string{safeDir1, safeDir2, safeDir3}, string(os.PathListSeparator)))
 
 	signal := NewPrivilegedPathSignal()
 	ctx := context.Background()
 
 	if signal.Check(ctx) {
-		t.Error("Expected false when PATH is safe")
+		t.Errorf("Expected false when PATH is safe, got diagnostic: %s", signal.Diagnostic())
 	}
 }
 
