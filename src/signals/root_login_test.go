@@ -96,6 +96,7 @@ func TestRootLoginSignal_Check_ContextTimeout(t *testing.T) {
 }
 
 func TestRootLoginSignal_Interface(t *testing.T) {
+	t.Helper()
 	// Verify that RootLoginSignal implements the Signal interface
 	var _ Signal = (*RootLoginSignal)(nil)
 	var _ Signal = NewRootLoginSignal()

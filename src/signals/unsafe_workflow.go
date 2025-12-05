@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/erichs/dashlights/src/signals/internal/pathsec"
 	"gopkg.in/yaml.v3"
 )
 
@@ -46,18 +47,22 @@ var untrustedContextPatterns = []string{
 // exprPattern matches ${{ ... }} expressions
 var exprPattern = regexp.MustCompile(`\$\{\{\s*([^}]+)\s*\}\}`)
 
+// NewUnsafeWorkflowSignal creates an UnsafeWorkflowSignal.
 func NewUnsafeWorkflowSignal() Signal {
 	return &UnsafeWorkflowSignal{}
 }
 
+// Name returns the human-readable name of the signal.
 func (s *UnsafeWorkflowSignal) Name() string {
 	return "Unsafe Workflow"
 }
 
+// Emoji returns the emoji associated with the signal.
 func (s *UnsafeWorkflowSignal) Emoji() string {
 	return "🎬"
 }
 
+// Diagnostic returns a description of detected GitHub Actions workflow issues.
 func (s *UnsafeWorkflowSignal) Diagnostic() string {
 	var parts []string
 	if len(s.pwnRequestFiles) > 0 {
@@ -73,6 +78,7 @@ func (s *UnsafeWorkflowSignal) Diagnostic() string {
 	return "GitHub Actions workflow contains security vulnerabilities"
 }
 
+// Remediation returns guidance on how to fix unsafe workflow patterns.
 func (s *UnsafeWorkflowSignal) Remediation() string {
 	if len(s.pwnRequestFiles) > 0 && len(s.exprInjections) > 0 {
 		return "Use pull_request trigger instead of pull_request_target; set untrusted inputs to env: variables before using in run: blocks"
@@ -83,6 +89,7 @@ func (s *UnsafeWorkflowSignal) Remediation() string {
 	return "Set untrusted inputs to env: variables before using in run: blocks"
 }
 
+// Check scans GitHub Actions workflows for pwn request and expression injection vulnerabilities.
 func (s *UnsafeWorkflowSignal) Check(ctx context.Context) bool {
 	workflowsDir := ".github/workflows"
 
@@ -117,11 +124,11 @@ func (s *UnsafeWorkflowSignal) Check(ctx context.Context) bool {
 			continue
 		}
 
-		if strings.Contains(name, "..") || strings.Contains(name, "/") {
+		if !pathsec.IsSafeName(name) {
 			continue
 		}
 
-		filePath, err := safeJoinPath(absWorkflowsDir, name)
+		filePath, err := pathsec.SafeJoinPath(absWorkflowsDir, name)
 		if err != nil {
 			continue
 		}
@@ -134,29 +141,6 @@ func (s *UnsafeWorkflowSignal) Check(ctx context.Context) bool {
 
 func (s *UnsafeWorkflowSignal) hasFindings() bool {
 	return len(s.pwnRequestFiles) > 0 || len(s.exprInjections) > 0
-}
-
-// safeJoinPath safely joins a base directory and filename, ensuring the result
-// stays within the base directory (prevents directory traversal attacks - G304)
-func safeJoinPath(baseDir, filename string) (string, error) {
-	// Clean the filename
-	filename = filepath.Clean(filename)
-
-	// Reject any path components
-	if strings.ContainsAny(filename, `/\`) || filename == ".." || strings.HasPrefix(filename, "..") {
-		return "", os.ErrInvalid
-	}
-
-	// Join and clean the full path
-	fullPath := filepath.Join(baseDir, filename)
-	fullPath = filepath.Clean(fullPath)
-
-	// Verify the result is still within the base directory
-	if !strings.HasPrefix(fullPath, baseDir+string(filepath.Separator)) && fullPath != baseDir {
-		return "", os.ErrInvalid
-	}
-
-	return fullPath, nil
 }
 
 func (s *UnsafeWorkflowSignal) checkWorkflowFile(ctx context.Context, filePath, name string) {

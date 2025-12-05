@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/erichs/dashlights/src/signals/internal/homedirutil"
 )
 
 // ProdPanicSignal checks for production context in kubectl or AWS
@@ -14,26 +16,32 @@ type ProdPanicSignal struct {
 	source  string
 }
 
+// NewProdPanicSignal creates a ProdPanicSignal.
 func NewProdPanicSignal() *ProdPanicSignal {
 	return &ProdPanicSignal{}
 }
 
+// Name returns the human-readable name of the signal.
 func (s *ProdPanicSignal) Name() string {
 	return "Prod Panic"
 }
 
+// Emoji returns the emoji associated with the signal.
 func (s *ProdPanicSignal) Emoji() string {
 	return "🚨"
 }
 
+// Diagnostic returns details about the detected production context.
 func (s *ProdPanicSignal) Diagnostic() string {
 	return "Production context detected: " + s.context + " (" + s.source + ")"
 }
 
+// Remediation returns guidance on switching away from production contexts.
 func (s *ProdPanicSignal) Remediation() string {
 	return "Switch to non-production context before running commands"
 }
 
+// Check inspects AWS and Kubernetes configuration for production indicators.
 func (s *ProdPanicSignal) Check(ctx context.Context) bool {
 	// Check AWS_PROFILE
 	awsProfile := os.Getenv("AWS_PROFILE")
@@ -52,27 +60,13 @@ func (s *ProdPanicSignal) Check(ctx context.Context) bool {
 }
 
 func (s *ProdPanicSignal) checkKubeContext(ctx context.Context) bool {
-	homeDir, err := os.UserHomeDir()
+	kubeConfig, err := homedirutil.SafeHomePath(".kube", "config")
 	if err != nil {
 		return false
 	}
 
-	// Sanitize home directory to prevent directory traversal attacks
-	// Validate that homeDir doesn't contain suspicious patterns
-	if strings.Contains(homeDir, "..") {
-		return false
-	}
-
-	// Clean the path to resolve any . or .. components
-	sanitizedHome := filepath.Clean(homeDir)
-
-	// Ensure the sanitized path is absolute (home directories should always be absolute)
-	if !filepath.IsAbs(sanitizedHome) {
-		return false
-	}
-
-	kubeConfig := filepath.Join(sanitizedHome, ".kube", "config")
-	file, err := os.Open(kubeConfig)
+	// filepath.Clean for gosec G304 - path is already validated by SafeHomePath
+	file, err := os.Open(filepath.Clean(kubeConfig))
 	if err != nil {
 		return false
 	}

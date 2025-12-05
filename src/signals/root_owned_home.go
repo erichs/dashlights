@@ -13,18 +13,22 @@ type RootOwnedHomeSignal struct {
 	foundFiles []string
 }
 
+// NewRootOwnedHomeSignal creates a RootOwnedHomeSignal.
 func NewRootOwnedHomeSignal() *RootOwnedHomeSignal {
 	return &RootOwnedHomeSignal{}
 }
 
+// Name returns the human-readable name of the signal.
 func (s *RootOwnedHomeSignal) Name() string {
 	return "Root Squatter"
 }
 
+// Emoji returns the emoji associated with the signal.
 func (s *RootOwnedHomeSignal) Emoji() string {
 	return "🍄"
 }
 
+// Diagnostic returns a description of the detected root-owned files.
 func (s *RootOwnedHomeSignal) Diagnostic() string {
 	if len(s.foundFiles) == 0 {
 		return "Root-owned files found in home directory"
@@ -32,11 +36,15 @@ func (s *RootOwnedHomeSignal) Diagnostic() string {
 	return "Root-owned: " + s.foundFiles[0]
 }
 
+// Remediation returns guidance on how to fix root-owned files in the home directory.
 func (s *RootOwnedHomeSignal) Remediation() string {
 	return "Fix ownership with: sudo chown -R $USER:$USER <file>"
 }
 
+// Check inspects common home directory paths for files owned by root.
 func (s *RootOwnedHomeSignal) Check(ctx context.Context) bool {
+	_ = ctx
+
 	// Only applicable on Unix-like systems
 	if runtime.GOOS == "windows" {
 		return false

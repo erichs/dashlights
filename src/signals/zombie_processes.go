@@ -61,28 +61,34 @@ type ZombieProcessesSignal struct {
 	fs    procFS
 }
 
+// NewZombieProcessesSignal creates a ZombieProcessesSignal.
 func NewZombieProcessesSignal() *ZombieProcessesSignal {
 	return &ZombieProcessesSignal{
 		fs: &realProcFS{},
 	}
 }
 
+// Name returns the human-readable name of the signal.
 func (s *ZombieProcessesSignal) Name() string {
 	return "Zombie Apocalypse"
 }
 
+// Emoji returns the emoji associated with the signal.
 func (s *ZombieProcessesSignal) Emoji() string {
 	return "🧟"
 }
 
+// Diagnostic returns a description of the detected zombie processes.
 func (s *ZombieProcessesSignal) Diagnostic() string {
 	return fmt.Sprintf("Excessive zombie processes detected: %d", s.count)
 }
 
+// Remediation returns guidance on fixing processes that leak zombies.
 func (s *ZombieProcessesSignal) Remediation() string {
 	return "Investigate and fix parent processes not reaping children"
 }
 
+// Check reports whether the system has an excessive number of zombie processes.
 func (s *ZombieProcessesSignal) Check(ctx context.Context) bool {
 	// Only applicable on Linux
 	if runtime.GOOS != "linux" {

@@ -16,7 +16,7 @@ type mockSignal struct {
 	delay        time.Duration
 }
 
-func (m *mockSignal) Check(ctx context.Context) bool {
+func (m *mockSignal) Check(_ context.Context) bool {
 	if m.delay > 0 {
 		time.Sleep(m.delay)
 	}

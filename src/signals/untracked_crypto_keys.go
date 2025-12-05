@@ -1,11 +1,11 @@
 package signals
 
 import (
-	"bufio"
 	"context"
 	"os"
-	"path/filepath"
 	"strings"
+
+	"github.com/erichs/dashlights/src/signals/internal/gitutil"
 )
 
 // UntrackedCryptoKeysSignal checks for crypto keys not in .gitignore
@@ -13,18 +13,22 @@ type UntrackedCryptoKeysSignal struct {
 	foundKeys []string
 }
 
+// NewUntrackedCryptoKeysSignal creates an UntrackedCryptoKeysSignal.
 func NewUntrackedCryptoKeysSignal() *UntrackedCryptoKeysSignal {
 	return &UntrackedCryptoKeysSignal{}
 }
 
+// Name returns the human-readable name of the signal.
 func (s *UntrackedCryptoKeysSignal) Name() string {
 	return "Dead Letter"
 }
 
+// Emoji returns the emoji associated with the signal.
 func (s *UntrackedCryptoKeysSignal) Emoji() string {
 	return "🗝️"
 }
 
+// Diagnostic returns a description of the detected untracked crypto keys.
 func (s *UntrackedCryptoKeysSignal) Diagnostic() string {
 	if len(s.foundKeys) == 0 {
 		return "Cryptographic keys found not in .gitignore"
@@ -32,11 +36,15 @@ func (s *UntrackedCryptoKeysSignal) Diagnostic() string {
 	return "Unignored key: " + s.foundKeys[0]
 }
 
+// Remediation returns guidance on how to keep crypto keys out of source control.
 func (s *UntrackedCryptoKeysSignal) Remediation() string {
 	return "Add key files to .gitignore to prevent accidental commit"
 }
 
+// Check searches for key-like files in the current directory that are not ignored by git.
 func (s *UntrackedCryptoKeysSignal) Check(ctx context.Context) bool {
+	_ = ctx
+
 	s.foundKeys = []string{}
 
 	// Key file extensions to look for
@@ -57,7 +65,7 @@ func (s *UntrackedCryptoKeysSignal) Check(ctx context.Context) bool {
 		for _, ext := range keyExtensions {
 			if strings.HasSuffix(name, ext) {
 				// Found a key file, check if it's in .gitignore
-				if !isInGitignore(name) {
+				if !gitutil.IsIgnored(name) {
 					s.foundKeys = append(s.foundKeys, name)
 				}
 				break
@@ -66,40 +74,4 @@ func (s *UntrackedCryptoKeysSignal) Check(ctx context.Context) bool {
 	}
 
 	return len(s.foundKeys) > 0
-}
-
-func isInGitignore(filename string) bool {
-	gitignoreFile, err := os.Open(".gitignore")
-	if err != nil {
-		return false // No .gitignore means not ignored
-	}
-	defer gitignoreFile.Close()
-
-	scanner := bufio.NewScanner(gitignoreFile)
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		// Skip comments and empty lines
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-
-		// Check for exact match or pattern match
-		if line == filename {
-			return true
-		}
-
-		// Check for wildcard patterns
-		if strings.Contains(line, "*") {
-			matched, err := filepath.Match(line, filename)
-			if err != nil {
-				// Invalid pattern, skip it
-				continue
-			}
-			if matched {
-				return true
-			}
-		}
-	}
-
-	return false
 }

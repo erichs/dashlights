@@ -10,27 +10,35 @@ type HistoryDisabledSignal struct {
 	reason string
 }
 
+// NewHistoryDisabledSignal creates a HistoryDisabledSignal.
 func NewHistoryDisabledSignal() *HistoryDisabledSignal {
 	return &HistoryDisabledSignal{}
 }
 
+// Name returns the human-readable name of the signal.
 func (s *HistoryDisabledSignal) Name() string {
 	return "Blind Spot"
 }
 
+// Emoji returns the emoji associated with the signal.
 func (s *HistoryDisabledSignal) Emoji() string {
 	return "🕶️"
 }
 
+// Diagnostic returns a description of why shell history is considered disabled.
 func (s *HistoryDisabledSignal) Diagnostic() string {
 	return s.reason
 }
 
+// Remediation returns guidance on how to re-enable shell history safely.
 func (s *HistoryDisabledSignal) Remediation() string {
 	return "Re-enable shell history for audit trail and incident response"
 }
 
+// Check inspects environment variables to determine if shell history is disabled.
 func (s *HistoryDisabledSignal) Check(ctx context.Context) bool {
+	_ = ctx
+
 	// Check if HISTFILE is unset or set to /dev/null
 	histfile := os.Getenv("HISTFILE")
 	if histfile == "/dev/null" {

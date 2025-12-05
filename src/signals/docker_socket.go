@@ -15,18 +15,22 @@ type DockerSocketSignal struct {
 	socketPath   string // actual socket path checked
 }
 
+// NewDockerSocketSignal creates a DockerSocketSignal.
 func NewDockerSocketSignal() *DockerSocketSignal {
 	return &DockerSocketSignal{}
 }
 
+// Name returns the human-readable name of the signal.
 func (s *DockerSocketSignal) Name() string {
 	return "Exposed Socket"
 }
 
+// Emoji returns the emoji associated with the signal.
 func (s *DockerSocketSignal) Emoji() string {
 	return "🐳"
 }
 
+// Diagnostic returns a description of the detected Docker socket issue.
 func (s *DockerSocketSignal) Diagnostic() string {
 	if s.issue == "orphaned" {
 		return "DOCKER_HOST points to non-existent socket: " + s.orphanedPath
@@ -34,6 +38,7 @@ func (s *DockerSocketSignal) Diagnostic() string {
 	return "Docker socket has overly permissive permissions"
 }
 
+// Remediation returns guidance on how to correct Docker socket configuration.
 func (s *DockerSocketSignal) Remediation() string {
 	if s.issue == "orphaned" {
 		return "Unset DOCKER_HOST or fix the socket path (Docker commands will hang)"
@@ -44,7 +49,10 @@ func (s *DockerSocketSignal) Remediation() string {
 	return "Restrict Docker socket access to docker group only"
 }
 
+// Check inspects Docker-related environment variables and socket permissions.
 func (s *DockerSocketSignal) Check(ctx context.Context) bool {
+	_ = ctx
+
 	// Only applicable on Unix-like systems
 	if runtime.GOOS == "windows" {
 		return false

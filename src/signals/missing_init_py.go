@@ -13,18 +13,22 @@ type MissingInitPySignal struct {
 	foundDirs []string
 }
 
+// NewMissingInitPySignal creates a MissingInitPySignal.
 func NewMissingInitPySignal() Signal {
 	return &MissingInitPySignal{}
 }
 
+// Name returns the human-readable name of the signal.
 func (s *MissingInitPySignal) Name() string {
 	return "Missing __init__.py"
 }
 
+// Emoji returns the emoji associated with the signal.
 func (s *MissingInitPySignal) Emoji() string {
 	return "📁" // Folder (missing file in package)
 }
 
+// Diagnostic returns a description of Python packages missing __init__.py.
 func (s *MissingInitPySignal) Diagnostic() string {
 	if len(s.foundDirs) > 0 {
 		return "Python package directories missing __init__.py: " + s.foundDirs[0]
@@ -32,10 +36,12 @@ func (s *MissingInitPySignal) Diagnostic() string {
 	return "Python package directories missing __init__.py (imports will fail)"
 }
 
+// Remediation returns guidance on adding __init__.py files.
 func (s *MissingInitPySignal) Remediation() string {
 	return "Add __init__.py to package directories (can be empty)"
 }
 
+// Check walks the repository for Python-style package directories missing __init__.py.
 func (s *MissingInitPySignal) Check(ctx context.Context) bool {
 	s.foundDirs = []string{}
 

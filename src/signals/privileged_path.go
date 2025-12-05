@@ -16,18 +16,22 @@ type PrivilegedPathSignal struct {
 	findings []string
 }
 
+// NewPrivilegedPathSignal creates a PrivilegedPathSignal.
 func NewPrivilegedPathSignal() *PrivilegedPathSignal {
 	return &PrivilegedPathSignal{}
 }
 
+// Name returns the human-readable name of the signal.
 func (s *PrivilegedPathSignal) Name() string {
 	return "Privileged Path"
 }
 
+// Emoji returns the emoji associated with the signal.
 func (s *PrivilegedPathSignal) Emoji() string {
 	return "💣"
 }
 
+// Diagnostic returns a description of the detected PATH issues.
 func (s *PrivilegedPathSignal) Diagnostic() string {
 	if len(s.findings) == 0 {
 		return "Potentially dangerous entries detected in PATH"
@@ -40,11 +44,15 @@ func (s *PrivilegedPathSignal) Diagnostic() string {
 	return "Multiple PATH issues detected: " + strings.Join(s.findings, "; ")
 }
 
+// Remediation returns guidance on how to harden the PATH configuration.
 func (s *PrivilegedPathSignal) Remediation() string {
 	return "Remove '.' and world-writable or user bin directories from PATH, or move user bin directories after system paths like /usr/bin"
 }
 
+// Check analyzes PATH for unsafe entries and ordering.
 func (s *PrivilegedPathSignal) Check(ctx context.Context) bool {
+	_ = ctx
+
 	if runtime.GOOS == "windows" {
 		return false
 	}

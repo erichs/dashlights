@@ -47,30 +47,30 @@ func TestParseDashlightFromEnv(t *testing.T) {
 	lights := make([]dashlight, 0)
 	// missing namespace prefix...
 	parseDashlightFromEnv(&lights, "FOO_2112_BGWHITE=foo")
-	if 0 != len(lights) {
+	if len(lights) != 0 {
 		t.Error("Expected length of 0, got ", len(lights))
 	}
 	// missing utf8 hex string...
 	parseDashlightFromEnv(&lights, "DASHLIGHT_FOO=foo")
-	if 0 != len(lights) {
+	if len(lights) != 0 {
 		t.Error("Expected length of 0, got ", len(lights))
 	}
 	// invalid utf8 hex strings...
 	parseDashlightFromEnv(&lights, "DASHLIGHT_FOO_ZZDA9=")
-	if 0 != len(lights) {
+	if len(lights) != 0 {
 		t.Error("Expected length of 0, got ", len(lights))
 	}
 	parseDashlightFromEnv(&lights, "DASHLIGHT_FOO_X=")
-	if 0 != len(lights) {
+	if len(lights) != 0 {
 		t.Error("Expected length of 0, got ", len(lights))
 	}
 	// invalid colormap codes are ignored...
 	parseDashlightFromEnv(&lights, "DASHLIGHT_NOCODETEST_0021_NOTACODE=")
-	if 1 != len(lights) {
+	if len(lights) != 1 {
 		t.Error("Expected length of 1, got ", len(lights))
 	}
 	parseDashlightFromEnv(&lights, "DASHLIGHT_VALIDCODETEST_0021_BGWHITE=")
-	if 2 != len(lights) {
+	if len(lights) != 2 {
 		t.Error("Expected length of 2, got ", len(lights))
 	}
 	light := lights[1]
@@ -83,7 +83,7 @@ func TestParseDashlightFromEnv(t *testing.T) {
 	if light.Diagnostic != "No diagnostic info provided." {
 		t.Error("Expected default diagnostic string, got ", light.Diagnostic)
 	}
-	if "*color.Color" != typeof(light.Color) {
+	if typeof(light.Color) != "*color.Color" {
 		t.Error("Expected color to be type *color.Color, got ", typeof(light.Color))
 	}
 	if light.UnsetString != "unset DASHLIGHT_VALIDCODETEST_0021_BGWHITE" {

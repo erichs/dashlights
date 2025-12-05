@@ -25,6 +25,7 @@ func GetAllSignals() []Signal {
 		NewDockerSocketSignal(),       // File stat
 		NewDebugEnabledSignal(),       // Env var check
 		NewHistoryPermissionsSignal(), // File stat checks
+		NewInsecureCurlPipeSignal(),   // Shell history scan
 		NewSSHAgentBloatSignal(),      // Unix socket query
 		NewSSHKeysSignal(),            // File stat checks
 

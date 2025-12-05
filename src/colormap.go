@@ -1,3 +1,4 @@
+// Package main contains the dashlights CLI and color helpers.
 package main
 
 import (

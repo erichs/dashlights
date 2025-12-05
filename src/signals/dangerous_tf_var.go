@@ -12,18 +12,22 @@ type DangerousTFVarSignal struct {
 	foundVars []string
 }
 
+// NewDangerousTFVarSignal creates a DangerousTFVarSignal.
 func NewDangerousTFVarSignal() Signal {
 	return &DangerousTFVarSignal{}
 }
 
+// Name returns the human-readable name of the signal.
 func (s *DangerousTFVarSignal) Name() string {
 	return "Dangerous TF_VAR"
 }
 
+// Emoji returns the emoji associated with the signal.
 func (s *DangerousTFVarSignal) Emoji() string {
 	return "🔐" // Locked with key (secrets)
 }
 
+// Diagnostic returns a description of the detected dangerous Terraform variables.
 func (s *DangerousTFVarSignal) Diagnostic() string {
 	if len(s.foundVars) > 0 {
 		return "Dangerous Terraform variables in environment: " + s.foundVars[0] + " (secrets in shell history)"
@@ -31,11 +35,15 @@ func (s *DangerousTFVarSignal) Diagnostic() string {
 	return "Dangerous Terraform variables in environment (secrets in shell history)"
 }
 
+// Remediation returns guidance on safer handling of Terraform secrets.
 func (s *DangerousTFVarSignal) Remediation() string {
 	return "Use .tfvars files or secret management instead of TF_VAR_ environment variables for secrets"
 }
 
+// Check scans TF_VAR_ environment variables for names that likely hold secrets.
 func (s *DangerousTFVarSignal) Check(ctx context.Context) bool {
+	_ = ctx
+
 	s.foundVars = []string{}
 
 	// Dangerous patterns to look for in TF_VAR_ variables

@@ -13,27 +13,35 @@ type DiskSpaceSignal struct {
 	percentUsed int
 }
 
+// NewDiskSpaceSignal creates a DiskSpaceSignal.
 func NewDiskSpaceSignal() *DiskSpaceSignal {
 	return &DiskSpaceSignal{}
 }
 
+// Name returns the human-readable name of the signal.
 func (s *DiskSpaceSignal) Name() string {
 	return "Full Tank"
 }
 
+// Emoji returns the emoji associated with the signal.
 func (s *DiskSpaceSignal) Emoji() string {
 	return "💾"
 }
 
+// Diagnostic returns a description of the detected disk space issue.
 func (s *DiskSpaceSignal) Diagnostic() string {
 	return fmt.Sprintf("%s is %d%% full", s.path, s.percentUsed)
 }
 
+// Remediation returns guidance on how to resolve the disk space issue.
 func (s *DiskSpaceSignal) Remediation() string {
 	return "Free up disk space to prevent logging and audit trail failures"
 }
 
+// Check evaluates disk usage and reports whether disk space is critically low.
 func (s *DiskSpaceSignal) Check(ctx context.Context) bool {
+	_ = ctx
+
 	// Only applicable on Unix-like systems
 	if runtime.GOOS == "windows" {
 		return false

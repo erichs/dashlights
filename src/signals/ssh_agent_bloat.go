@@ -25,27 +25,35 @@ const (
 // This can cause MaxAuthTries lockouts, fingerprinting, and increased blast radius
 type SSHAgentBloatSignal struct{}
 
+// NewSSHAgentBloatSignal creates an SSHAgentBloatSignal.
 func NewSSHAgentBloatSignal() Signal {
 	return &SSHAgentBloatSignal{}
 }
 
+// Name returns the human-readable name of the signal.
 func (s *SSHAgentBloatSignal) Name() string {
 	return "SSH Agent Key Bloat"
 }
 
+// Emoji returns the emoji associated with the signal.
 func (s *SSHAgentBloatSignal) Emoji() string {
 	return "🔑" // Key emoji
 }
 
+// Diagnostic returns a description of the overloaded SSH agent state.
 func (s *SSHAgentBloatSignal) Diagnostic() string {
 	return "SSH agent has too many keys loaded (causes MaxAuthTries lockouts and fingerprinting)"
 }
 
+// Remediation returns guidance on how to reduce keys loaded into the SSH agent.
 func (s *SSHAgentBloatSignal) Remediation() string {
 	return "Run: ssh-add -D && ssh-add ~/.ssh/your_key OR add 'IdentitiesOnly yes' to ~/.ssh/config"
 }
 
+// Check queries the SSH agent and reports if too many keys are loaded.
 func (s *SSHAgentBloatSignal) Check(ctx context.Context) bool {
+	_ = ctx
+
 	// Check if SSH_AUTH_SOCK is set
 	sockPath := os.Getenv("SSH_AUTH_SOCK")
 	if sockPath == "" {
