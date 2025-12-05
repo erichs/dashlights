@@ -9,8 +9,9 @@ REPO_ROOT=$(git rev-parse --show-toplevel)
 # Track errors
 ERRORS=()
 
-# Find all signal implementation files (excluding test files, signal.go, and registry.go)
+# Find all signal implementation files (excluding test files, signal.go, registry.go, and internal/)
 SIGNAL_FILES=$(find "$REPO_ROOT/src/signals" -name "*.go" \
+  ! -path "*/internal/*" \
   ! -name "*_test.go" \
   ! -name "signal.go" \
   ! -name "registry.go" \
