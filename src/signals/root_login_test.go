@@ -101,3 +101,15 @@ func TestRootLoginSignal_Interface(t *testing.T) {
 	var _ Signal = (*RootLoginSignal)(nil)
 	var _ Signal = NewRootLoginSignal()
 }
+
+func TestRootLoginSignal_Disabled(t *testing.T) {
+	os.Setenv("DASHLIGHTS_DISABLE_ROOT_LOGIN", "1")
+	defer os.Unsetenv("DASHLIGHTS_DISABLE_ROOT_LOGIN")
+
+	signal := NewRootLoginSignal()
+	ctx := context.Background()
+
+	if signal.Check(ctx) {
+		t.Error("Expected false when signal is disabled via environment variable")
+	}
+}

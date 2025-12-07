@@ -178,3 +178,15 @@ func TestLDPreloadSignal_Check_WrongOSVariable(t *testing.T) {
 		}
 	}
 }
+
+func TestLDPreloadSignal_Disabled(t *testing.T) {
+	os.Setenv("DASHLIGHTS_DISABLE_LD_PRELOAD", "1")
+	defer os.Unsetenv("DASHLIGHTS_DISABLE_LD_PRELOAD")
+
+	signal := NewLDPreloadSignal()
+	ctx := context.Background()
+
+	if signal.Check(ctx) {
+		t.Error("Expected false when signal is disabled via environment variable")
+	}
+}

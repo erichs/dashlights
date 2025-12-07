@@ -237,3 +237,12 @@ sudo systemctl enable docker
    - **macOS**: Socket in user's home directory - protected by macOS file permissions
    - **Windows**: Uses named pipes - different security model
 
+
+## Disabling This Signal
+
+To disable this signal, set the environment variable:
+```
+export DASHLIGHTS_DISABLE_DOCKER_SOCKET=1
+```
+
+To disable permanently, add the above line to your shell configuration file (`~/.zshrc`, `~/.bashrc`, etc.).

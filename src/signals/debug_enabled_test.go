@@ -172,3 +172,15 @@ func TestDebugEnabledSignal_ValueDoesntMatter(t *testing.T) {
 		})
 	}
 }
+
+func TestDebugEnabledSignal_Disabled(t *testing.T) {
+	os.Setenv("DASHLIGHTS_DISABLE_DEBUG_ENABLED", "1")
+	defer os.Unsetenv("DASHLIGHTS_DISABLE_DEBUG_ENABLED")
+
+	signal := NewDebugEnabledSignal()
+	ctx := context.Background()
+
+	if signal.Check(ctx) {
+		t.Error("Expected false when signal is disabled via environment variable")
+	}
+}

@@ -127,3 +127,12 @@ The signal detects:
 - **Expression Injection**: [Keeping your GitHub Actions and workflows secure Part 2: Untrusted input](https://securitylab.github.com/resources/github-actions-untrusted-input/) - GitHub Security Lab
 - **Author**: Jaroslav Lobačevski (jarlob)
 
+
+## Disabling This Signal
+
+To disable this signal, set the environment variable:
+```
+export DASHLIGHTS_DISABLE_UNSAFE_WORKFLOW=1
+```
+
+To disable permanently, add the above line to your shell configuration file (`~/.zshrc`, `~/.bashrc`, etc.).

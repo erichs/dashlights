@@ -165,3 +165,15 @@ func TestProxyActiveSignal_Check_MultipleProxies(t *testing.T) {
 		t.Errorf("Expected at least 2 proxies found, got %d", len(signal.foundProxies))
 	}
 }
+
+func TestProxyActiveSignal_Disabled(t *testing.T) {
+	os.Setenv("DASHLIGHTS_DISABLE_PROXY_ACTIVE", "1")
+	defer os.Unsetenv("DASHLIGHTS_DISABLE_PROXY_ACTIVE")
+
+	signal := NewProxyActiveSignal()
+	ctx := context.Background()
+
+	if signal.Check(ctx) {
+		t.Error("Expected false when signal is disabled via environment variable")
+	}
+}

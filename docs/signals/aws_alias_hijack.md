@@ -56,3 +56,13 @@ The signal also checks for insecure file permissions on the alias file itself, a
 - **Regularly audit** your alias file for unexpected changes
 - **Monitor** the file with integrity checking tools if you're in a high-security environment
 
+
+
+## Disabling This Signal
+
+To disable this signal, set the environment variable:
+```
+export DASHLIGHTS_DISABLE_AWS_ALIAS_HIJACK=1
+```
+
+To disable permanently, add the above line to your shell configuration file (`~/.zshrc`, `~/.bashrc`, etc.).

@@ -42,6 +42,11 @@ func (s *NpmrcTokensSignal) Remediation() string {
 func (s *NpmrcTokensSignal) Check(ctx context.Context) bool {
 	_ = ctx
 
+	// Check if this signal is disabled via environment variable
+	if os.Getenv("DASHLIGHTS_DISABLE_NPMRC_TOKENS") != "" {
+		return false
+	}
+
 	// Check if .npmrc exists in current directory
 	file, err := os.Open(".npmrc")
 	if err != nil {

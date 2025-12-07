@@ -194,3 +194,12 @@ export API_KEY="op://vault/item/field"
    gitleaks detect --source . --verbose
    ```
 
+
+## Disabling This Signal
+
+To disable this signal, set the environment variable:
+```
+export DASHLIGHTS_DISABLE_ENV_NOT_IGNORED=1
+```
+
+To disable permanently, add the above line to your shell configuration file (`~/.zshrc`, `~/.bashrc`, etc.).

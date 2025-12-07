@@ -97,7 +97,7 @@ git push origin --force --all
    ```bash
    # Via npm CLI
    npm token revoke <token-id>
-   
+
    # Or via npm website
    # Go to https://www.npmjs.com/settings/tokens
    ```
@@ -106,7 +106,7 @@ git push origin --force --all
    ```bash
    # Create a new token
    npm token create --read-only  # or --publish for publishing
-   
+
    # Or via npm website
    # Go to https://www.npmjs.com/settings/tokens
    ```
@@ -115,7 +115,7 @@ git push origin --force --all
    ```bash
    # Edit ~/.npmrc
    nano ~/.npmrc
-   
+
    # Replace old token with new one
    //registry.npmjs.org/:_authToken=npm_newTokenHere
    ```
@@ -215,7 +215,7 @@ Remove-Item .npmrc
    ```bash
    # Create read-only token for CI
    npm token create --read-only --cidr=0.0.0.0/0
-   
+
    # Create publish token with IP restrictions
    npm token create --publish --cidr=your.ci.ip.address/32
    ```
@@ -224,7 +224,7 @@ Remove-Item .npmrc
    ```bash
    # List all tokens
    npm token list
-   
+
    # Revoke unused tokens
    npm token revoke <token-id>
    ```
@@ -235,14 +235,14 @@ Remove-Item .npmrc
    cat > .npmrc.example <<EOF
    # NPM Configuration
    # Copy to .npmrc and add your auth token
-   
+
    save-exact=true
    package-lock=true
-   
+
    # Add your token to ~/.npmrc instead:
    # //registry.npmjs.org/:_authToken=npm_yourTokenHere
    EOF
-   
+
    git add .npmrc.example
    ```
 
@@ -257,3 +257,12 @@ Remove-Item .npmrc
    gitleaks detect --source . --verbose
    ```
 
+
+## Disabling This Signal
+
+To disable this signal, set the environment variable:
+```
+export DASHLIGHTS_DISABLE_NPMRC_TOKENS=1
+```
+
+To disable permanently, add the above line to your shell configuration file (`~/.zshrc`, `~/.bashrc`, etc.).

@@ -122,3 +122,12 @@ pre-commit install
 4. **Run hooks in CI too** to catch any bypass: `pre-commit run --all-files`
 5. **Keep hooks fast** - slow hooks lead to developers bypassing them with `--no-verify`
 
+## Disabling This Signal
+
+To disable this signal, set the environment variable:
+```
+export DASHLIGHTS_DISABLE_MISSING_GIT_HOOKS=1
+```
+
+To disable permanently, add the above line to your shell configuration file (`~/.zshrc`, `~/.bashrc`, etc.).
+

@@ -188,3 +188,15 @@ func TestHistoryDisabledSignal_Check_HistcontrolOther(t *testing.T) {
 		t.Error("Expected false when HISTCONTROL is ignoredups (not a security issue)")
 	}
 }
+
+func TestHistoryDisabledSignal_Disabled(t *testing.T) {
+	os.Setenv("DASHLIGHTS_DISABLE_HISTORY_DISABLED", "1")
+	defer os.Unsetenv("DASHLIGHTS_DISABLE_HISTORY_DISABLED")
+
+	signal := NewHistoryDisabledSignal()
+	ctx := context.Background()
+
+	if signal.Check(ctx) {
+		t.Error("Expected false when signal is disabled via environment variable")
+	}
+}

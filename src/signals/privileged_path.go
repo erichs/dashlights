@@ -53,6 +53,11 @@ func (s *PrivilegedPathSignal) Remediation() string {
 func (s *PrivilegedPathSignal) Check(ctx context.Context) bool {
 	_ = ctx
 
+	// Check if this signal is disabled via environment variable
+	if os.Getenv("DASHLIGHTS_DISABLE_PRIVILEGED_PATH") != "" {
+		return false
+	}
+
 	if runtime.GOOS == "windows" {
 		return false
 	}

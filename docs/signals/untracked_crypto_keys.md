@@ -115,7 +115,7 @@ git push origin --force --all
    ```bash
    # Generate new SSL certificate
    openssl req -x509 -newkey rsa:4096 -keyout new-server.key -out new-server.crt -days 365 -nodes
-   
+
    # Or use Let's Encrypt
    certbot certonly --standalone -d example.com
    ```
@@ -126,7 +126,7 @@ git push origin --force --all
    ```bash
    # Revoke SSL certificate
    certbot revoke --cert-path /path/to/old-cert.pem
-   
+
    # Or contact your CA to revoke
    ```
 
@@ -235,7 +235,7 @@ sops -e server.key > server.key.enc
    # Private keys should be readable only by owner
    chmod 600 *.key
    chmod 600 *.pem
-   
+
    # Certificates can be more permissive
    chmod 644 *.crt
    ```
@@ -244,7 +244,7 @@ sops -e server.key > server.key.enc
    ```bash
    #!/bin/bash
    # .git/hooks/pre-commit
-   
+
    if git diff --cached --name-only | grep -qE '\.(pem|key|crt|p12|pfx)$'; then
      echo "Error: Attempting to commit crypto keys!"
      echo "These files should not be in version control."
@@ -256,7 +256,7 @@ sops -e server.key > server.key.enc
    ```bash
    # Use gitleaks or trufflehog
    gitleaks detect --source . --verbose
-   
+
    # Or git-secrets
    git secrets --scan
    ```
@@ -264,12 +264,12 @@ sops -e server.key > server.key.enc
 7. **Document key management**:
    ```markdown
    # Key Management
-   
+
    ## SSL Certificates
    - Stored in AWS Certificate Manager
    - Auto-renewed via Let's Encrypt
    - Access via IAM role
-   
+
    ## API Keys
    - Stored in 1Password vault "Production"
    - Rotated every 90 days
@@ -357,3 +357,12 @@ find . -name "*.key" -o -name "*.pem" | xargs chmod 600
 6. **Investigate** how keys were exposed
 7. **Update procedures** to prevent recurrence
 
+
+## Disabling This Signal
+
+To disable this signal, set the environment variable:
+```
+export DASHLIGHTS_DISABLE_UNTRACKED_CRYPTO_KEYS=1
+```
+
+To disable permanently, add the above line to your shell configuration file (`~/.zshrc`, `~/.bashrc`, etc.).

@@ -287,10 +287,10 @@ sudo htpdate -s www.google.com
    ```
    # North America
    server north-america.pool.ntp.org
-   
+
    # Europe
    server europe.pool.ntp.org
-   
+
    # Asia
    server asia.pool.ntp.org
    ```
@@ -299,7 +299,7 @@ sudo htpdate -s www.google.com
    ```bash
    # Check drift regularly
    chronyc tracking | grep "System time"
-   
+
    # Alert if drift > 1 second
    ```
 
@@ -307,7 +307,7 @@ sudo htpdate -s www.google.com
    ```bash
    # Sync hardware clock
    sudo hwclock --systohc
-   
+
    # Check hardware clock
    sudo hwclock --show
    ```
@@ -322,10 +322,10 @@ sudo htpdate -s www.google.com
    ```
    # AWS
    server 169.254.169.123 prefer iburst
-   
+
    # GCP
    server metadata.google.internal prefer iburst
-   
+
    # Azure
    server time.windows.com prefer iburst
    ```
@@ -351,3 +351,12 @@ sudo htpdate -s www.google.com
 4. **Use NTS (Network Time Security)** if available
 5. **Validate time sources** are legitimate
 
+
+## Disabling This Signal
+
+To disable this signal, set the environment variable:
+```
+export DASHLIGHTS_DISABLE_TIME_DRIFT=1
+```
+
+To disable permanently, add the above line to your shell configuration file (`~/.zshrc`, `~/.bashrc`, etc.).

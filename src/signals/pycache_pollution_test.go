@@ -161,3 +161,15 @@ func TestPyCachePollutionSignal_SkipsGitDir(t *testing.T) {
 		t.Error("Expected false - should skip .git directory")
 	}
 }
+
+func TestPyCachePollutionSignal_Disabled(t *testing.T) {
+	os.Setenv("DASHLIGHTS_DISABLE_PYCACHE_POLLUTION", "1")
+	defer os.Unsetenv("DASHLIGHTS_DISABLE_PYCACHE_POLLUTION")
+
+	signal := NewPyCachePollutionSignal()
+	ctx := context.Background()
+
+	if signal.Check(ctx) {
+		t.Error("Expected false when signal is disabled via environment variable")
+	}
+}

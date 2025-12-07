@@ -158,7 +158,7 @@ sudo ldconfig
 # Unset DYLD_INSERT_LIBRARIES
 unset DYLD_INSERT_LIBRARIES
 
-# macOS System Integrity Protection (SIP) prevents DYLD_* 
+# macOS System Integrity Protection (SIP) prevents DYLD_*
 # from affecting system binaries, but check anyway
 csrutil status
 # Should show: System Integrity Protection status: enabled
@@ -171,13 +171,13 @@ csrutil status
 2. **Use alternatives for debugging**:
    ```bash
    # Instead of LD_PRELOAD, use:
-   
+
    # For memory debugging
    valgrind --leak-check=full ./program
-   
+
    # For system call tracing
    strace ./program
-   
+
    # For library call tracing
    ltrace ./program
    ```
@@ -208,10 +208,10 @@ csrutil status
    ```bash
    # Save the library file
    cp $LD_PRELOAD /tmp/evidence/
-   
+
    # Save process list
    ps auxf > /tmp/evidence/processes.txt
-   
+
    # Save network connections
    netstat -tulpn > /tmp/evidence/network.txt
    ```
@@ -219,3 +219,12 @@ csrutil status
 4. **Rotate all credentials** used on the system
 5. **Consider full system rebuild** if rootkit is confirmed
 
+
+## Disabling This Signal
+
+To disable this signal, set the environment variable:
+```
+export DASHLIGHTS_DISABLE_LD_PRELOAD=1
+```
+
+To disable permanently, add the above line to your shell configuration file (`~/.zshrc`, `~/.bashrc`, etc.).

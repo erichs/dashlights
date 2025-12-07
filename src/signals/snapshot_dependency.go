@@ -45,6 +45,11 @@ func (s *SnapshotDependencySignal) Remediation() string {
 
 // Check scans Java build files for SNAPSHOT dependencies on release branches/tags.
 func (s *SnapshotDependencySignal) Check(ctx context.Context) bool {
+	// Check if this signal is disabled via environment variable
+	if os.Getenv("DASHLIGHTS_DISABLE_SNAPSHOT_DEPENDENCY") != "" {
+		return false
+	}
+
 	// First check if we're on a release branch or tag
 	if !isReleaseContext(ctx) {
 		// Not on a release branch/tag, SNAPSHOT is OK

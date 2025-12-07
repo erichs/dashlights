@@ -247,3 +247,15 @@ kind: Config
 		t.Error("Expected true with valid absolute path and production context")
 	}
 }
+
+func TestProdPanicSignal_Disabled(t *testing.T) {
+	os.Setenv("DASHLIGHTS_DISABLE_PROD_PANIC", "1")
+	defer os.Unsetenv("DASHLIGHTS_DISABLE_PROD_PANIC")
+
+	signal := NewProdPanicSignal()
+	ctx := context.Background()
+
+	if signal.Check(ctx) {
+		t.Error("Expected false when signal is disabled via environment variable")
+	}
+}

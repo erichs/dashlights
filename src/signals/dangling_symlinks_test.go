@@ -162,3 +162,15 @@ func TestDanglingSymlinksSignal_RelativeSymlink(t *testing.T) {
 		t.Error("Expected true for dangling relative symlink")
 	}
 }
+
+func TestDanglingSymlinksSignal_Disabled(t *testing.T) {
+	os.Setenv("DASHLIGHTS_DISABLE_DANGLING_SYMLINKS", "1")
+	defer os.Unsetenv("DASHLIGHTS_DISABLE_DANGLING_SYMLINKS")
+
+	signal := NewDanglingSymlinksSignal()
+	ctx := context.Background()
+
+	if signal.Check(ctx) {
+		t.Error("Expected false when signal is disabled via environment variable")
+	}
+}

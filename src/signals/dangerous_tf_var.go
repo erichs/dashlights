@@ -44,6 +44,11 @@ func (s *DangerousTFVarSignal) Remediation() string {
 func (s *DangerousTFVarSignal) Check(ctx context.Context) bool {
 	_ = ctx
 
+	// Check if this signal is disabled via environment variable
+	if os.Getenv("DASHLIGHTS_DISABLE_DANGEROUS_TF_VAR") != "" {
+		return false
+	}
+
 	s.foundVars = []string{}
 
 	// Dangerous patterns to look for in TF_VAR_ variables

@@ -43,6 +43,11 @@ func (s *MissingInitPySignal) Remediation() string {
 
 // Check walks the repository for Python-style package directories missing __init__.py.
 func (s *MissingInitPySignal) Check(ctx context.Context) bool {
+	// Check if this signal is disabled via environment variable
+	if os.Getenv("DASHLIGHTS_DISABLE_MISSING_INIT_PY") != "" {
+		return false
+	}
+
 	s.foundDirs = []string{}
 
 	// Walk the current directory looking for Python packages

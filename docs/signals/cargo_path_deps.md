@@ -29,7 +29,7 @@ While path dependencies are useful during local development, they break builds o
    # Before (breaks builds)
    [dependencies]
    my-lib = { path = "../my-lib" }
-   
+
    # After (works everywhere)
    [dependencies]
    my-lib = "1.0.0"
@@ -90,3 +90,12 @@ If you need path dependencies for active development:
    cargo build
    ```
 
+
+## Disabling This Signal
+
+To disable this signal, set the environment variable:
+```
+export DASHLIGHTS_DISABLE_CARGO_PATH_DEPS=1
+```
+
+To disable permanently, add the above line to your shell configuration file (`~/.zshrc`, `~/.bashrc`, etc.).

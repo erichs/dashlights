@@ -53,6 +53,11 @@ func (s *DockerSocketSignal) Remediation() string {
 func (s *DockerSocketSignal) Check(ctx context.Context) bool {
 	_ = ctx
 
+	// Check if this signal is disabled via environment variable
+	if os.Getenv("DASHLIGHTS_DISABLE_DOCKER_SOCKET") != "" {
+		return false
+	}
+
 	// Only applicable on Unix-like systems
 	if runtime.GOOS == "windows" {
 		return false

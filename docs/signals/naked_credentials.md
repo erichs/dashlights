@@ -185,7 +185,7 @@ nano ~/.bashrc  # or ~/.zshrc
    ```bash
    # Bad
    export API_KEY="sk-1234567890abcdef"
-   
+
    # Good
    export API_KEY="op://vault/item/field"
    ```
@@ -194,7 +194,7 @@ nano ~/.bashrc  # or ~/.zshrc
    ```bash
    # Reference to secret manager
    export DB_PASSWORD="op://Production/Database/password"
-   
+
    # Or use a secret file
    export DB_PASSWORD_FILE="/run/secrets/db_password"
    ```
@@ -212,7 +212,7 @@ nano ~/.bashrc  # or ~/.zshrc
    ```bash
    # Development
    export API_KEY="op://Development/API/key"
-   
+
    # Production
    export API_KEY="op://Production/API/key"
    ```
@@ -228,7 +228,7 @@ nano ~/.bashrc  # or ~/.zshrc
    ```bash
    # AWS temporary credentials
    aws sts get-session-token
-   
+
    # Or use IAM roles instead of access keys
    ```
 
@@ -237,3 +237,12 @@ nano ~/.bashrc  # or ~/.zshrc
    - Use automated rotation when available
    - Monitor for failed authentication attempts
 
+
+## Disabling This Signal
+
+To disable this signal, set the environment variable:
+```
+export DASHLIGHTS_DISABLE_NAKED_CREDENTIALS=1
+```
+
+To disable permanently, add the above line to your shell configuration file (`~/.zshrc`, `~/.bashrc`, etc.).

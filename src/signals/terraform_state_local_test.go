@@ -120,3 +120,15 @@ func TestTerraformStateLocalSignal_Metadata(t *testing.T) {
 		t.Error("Remediation should not be empty")
 	}
 }
+
+func TestTerraformStateLocalSignal_Disabled(t *testing.T) {
+	os.Setenv("DASHLIGHTS_DISABLE_TERRAFORM_STATE_LOCAL", "1")
+	defer os.Unsetenv("DASHLIGHTS_DISABLE_TERRAFORM_STATE_LOCAL")
+
+	signal := NewTerraformStateLocalSignal()
+	ctx := context.Background()
+
+	if signal.Check(ctx) {
+		t.Error("Expected false when signal is disabled via environment variable")
+	}
+}

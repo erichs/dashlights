@@ -211,3 +211,15 @@ func TestHistoryPermissionsSignal_MultipleFiles(t *testing.T) {
 		t.Error("Expected true when any history file has insecure permissions")
 	}
 }
+
+func TestHistoryPermissionsSignal_Disabled(t *testing.T) {
+	os.Setenv("DASHLIGHTS_DISABLE_HISTORY_PERMISSIONS", "1")
+	defer os.Unsetenv("DASHLIGHTS_DISABLE_HISTORY_PERMISSIONS")
+
+	signal := NewHistoryPermissionsSignal()
+	ctx := context.Background()
+
+	if signal.Check(ctx) {
+		t.Error("Expected false when signal is disabled via environment variable")
+	}
+}

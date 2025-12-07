@@ -224,7 +224,7 @@ Add-Content .gitignore "*.py[cod]"
    ```bash
    # Create virtual environment
    python3 -m venv venv
-   
+
    # Add to .gitignore
    echo "venv/" >> .gitignore
    ```
@@ -264,3 +264,12 @@ Python creates `__pycache__` directories to store compiled bytecode (`.pyc` file
 - **Ignored** in .gitignore
 - **Cleaned** before distribution
 
+
+## Disabling This Signal
+
+To disable this signal, set the environment variable:
+```
+export DASHLIGHTS_DISABLE_PYCACHE_POLLUTION=1
+```
+
+To disable permanently, add the above line to your shell configuration file (`~/.zshrc`, `~/.bashrc`, etc.).

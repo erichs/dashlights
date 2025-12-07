@@ -37,6 +37,11 @@ func (s *DanglingSymlinksSignal) Remediation() string {
 
 // Check scans the current directory for symlinks whose targets do not exist.
 func (s *DanglingSymlinksSignal) Check(ctx context.Context) bool {
+	// Check if this signal is disabled via environment variable
+	if os.Getenv("DASHLIGHTS_DISABLE_DANGLING_SYMLINKS") != "" {
+		return false
+	}
+
 	// Get current working directory
 	cwd, err := os.Getwd()
 	if err != nil {

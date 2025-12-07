@@ -90,3 +90,15 @@ func TestRebootPendingSignal_Check_Linux_RebootRequired(t *testing.T) {
 		t.Error("Expected true when /var/run/reboot-required exists")
 	}
 }
+
+func TestRebootPendingSignal_Disabled(t *testing.T) {
+	os.Setenv("DASHLIGHTS_DISABLE_REBOOT_PENDING", "1")
+	defer os.Unsetenv("DASHLIGHTS_DISABLE_REBOOT_PENDING")
+
+	signal := NewRebootPendingSignal()
+	ctx := context.Background()
+
+	if signal.Check(ctx) {
+		t.Error("Expected false when signal is disabled via environment variable")
+	}
+}

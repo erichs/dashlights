@@ -2,6 +2,7 @@ package signals
 
 import (
 	"context"
+	"os"
 	"syscall"
 	"testing"
 )
@@ -69,5 +70,17 @@ func TestPermissiveUmaskSignal_formatUmask(t *testing.T) {
 		if result != tt.expected {
 			t.Errorf("formatUmask(0%o) = %s, expected %s", tt.umask, result, tt.expected)
 		}
+	}
+}
+
+func TestPermissiveUmaskSignal_Disabled(t *testing.T) {
+	os.Setenv("DASHLIGHTS_DISABLE_PERMISSIVE_UMASK", "1")
+	defer os.Unsetenv("DASHLIGHTS_DISABLE_PERMISSIVE_UMASK")
+
+	signal := NewPermissiveUmaskSignal()
+	ctx := context.Background()
+
+	if signal.Check(ctx) {
+		t.Error("Expected false when signal is disabled via environment variable")
 	}
 }

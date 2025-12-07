@@ -187,3 +187,15 @@ func TestEnvNotIgnoredSignal_Check_SubstringMatch(t *testing.T) {
 		t.Error("Expected false when .env is covered by pattern containing .env")
 	}
 }
+
+func TestEnvNotIgnoredSignal_Disabled(t *testing.T) {
+	os.Setenv("DASHLIGHTS_DISABLE_ENV_NOT_IGNORED", "1")
+	defer os.Unsetenv("DASHLIGHTS_DISABLE_ENV_NOT_IGNORED")
+
+	signal := NewEnvNotIgnoredSignal()
+	ctx := context.Background()
+
+	if signal.Check(ctx) {
+		t.Error("Expected false when signal is disabled via environment variable")
+	}
+}

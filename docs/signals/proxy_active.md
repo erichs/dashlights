@@ -264,7 +264,7 @@ sudo systemctl restart docker
    ```bash
    # Check startup scripts
    cat /etc/profile /etc/bash.bashrc ~/.bashrc ~/.zshrc
-   
+
    # Check cron jobs
    crontab -l
    sudo crontab -l
@@ -272,3 +272,12 @@ sudo systemctl restart docker
 6. **Rotate all credentials** that may have been intercepted
 7. **Report to security team**
 
+
+## Disabling This Signal
+
+To disable this signal, set the environment variable:
+```
+export DASHLIGHTS_DISABLE_PROXY_ACTIVE=1
+```
+
+To disable permanently, add the above line to your shell configuration file (`~/.zshrc`, `~/.bashrc`, etc.).

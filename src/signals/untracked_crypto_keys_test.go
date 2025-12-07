@@ -182,3 +182,15 @@ func TestUntrackedCryptoKeysSignal_Check_InvalidGitignorePattern(t *testing.T) {
 		t.Error("Expected foundKeys to contain private.key")
 	}
 }
+
+func TestUntrackedCryptoKeysSignal_Disabled(t *testing.T) {
+	os.Setenv("DASHLIGHTS_DISABLE_UNTRACKED_CRYPTO_KEYS", "1")
+	defer os.Unsetenv("DASHLIGHTS_DISABLE_UNTRACKED_CRYPTO_KEYS")
+
+	signal := NewUntrackedCryptoKeysSignal()
+	ctx := context.Background()
+
+	if signal.Check(ctx) {
+		t.Error("Expected false when signal is disabled via environment variable")
+	}
+}

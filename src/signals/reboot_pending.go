@@ -38,6 +38,11 @@ func (s *RebootPendingSignal) Remediation() string {
 func (s *RebootPendingSignal) Check(ctx context.Context) bool {
 	_ = ctx
 
+	// Check if this signal is disabled via environment variable
+	if os.Getenv("DASHLIGHTS_DISABLE_REBOOT_PENDING") != "" {
+		return false
+	}
+
 	// Check for Debian/Ubuntu reboot-required flag
 	if runtime.GOOS == "linux" {
 		if _, err := os.Stat("/var/run/reboot-required"); err == nil {

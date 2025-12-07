@@ -3,6 +3,7 @@ package signals
 import (
 	"context"
 	"fmt"
+	"os"
 	"sync"
 	"syscall"
 )
@@ -47,6 +48,11 @@ func (s *PermissiveUmaskSignal) Remediation() string {
 // Check evaluates the current umask and reports if it is overly permissive.
 func (s *PermissiveUmaskSignal) Check(ctx context.Context) bool {
 	_ = ctx
+
+	// Check if this signal is disabled via environment variable
+	if os.Getenv("DASHLIGHTS_DISABLE_PERMISSIVE_UMASK") != "" {
+		return false
+	}
 
 	// Serialize umask checks to prevent race conditions across concurrent goroutines.
 	// syscall.Umask() modifies process-wide state, so we must ensure only one

@@ -42,6 +42,11 @@ func (s *ProxyActiveSignal) Remediation() string {
 func (s *ProxyActiveSignal) Check(ctx context.Context) bool {
 	_ = ctx
 
+	// Check if this signal is disabled via environment variable
+	if os.Getenv("DASHLIGHTS_DISABLE_PROXY_ACTIVE") != "" {
+		return false
+	}
+
 	s.foundProxies = []string{}
 
 	proxyVars := []string{

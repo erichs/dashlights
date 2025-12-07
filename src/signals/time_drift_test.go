@@ -218,3 +218,15 @@ func TestTimeDriftSignal_FileCloseHandling(t *testing.T) {
 		}
 	}
 }
+
+func TestTimeDriftSignal_Disabled(t *testing.T) {
+	os.Setenv("DASHLIGHTS_DISABLE_TIME_DRIFT", "1")
+	defer os.Unsetenv("DASHLIGHTS_DISABLE_TIME_DRIFT")
+
+	signal := NewTimeDriftSignal()
+	ctx := context.Background()
+
+	if signal.Check(ctx) {
+		t.Error("Expected false when signal is disabled via environment variable")
+	}
+}

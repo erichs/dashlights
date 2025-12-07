@@ -91,7 +91,7 @@ sops -d terraform.tfvars.enc | terraform apply -var-file=/dev/stdin
    ```bash
    # Edit history file and remove lines with secrets
    nano ~/.bash_history  # or ~/.zsh_history
-   
+
    # Or clear entire history (nuclear option)
    history -c
    rm ~/.bash_history
@@ -119,3 +119,12 @@ sops -d terraform.tfvars.enc | terraform apply -var-file=/dev/stdin
 - **Use different `.tfvars` files** for different environments (dev.tfvars, prod.tfvars)
 - **Store `.tfvars` files securely** - never commit them to version control
 
+
+## Disabling This Signal
+
+To disable this signal, set the environment variable:
+```
+export DASHLIGHTS_DISABLE_DANGEROUS_TF_VAR=1
+```
+
+To disable permanently, add the above line to your shell configuration file (`~/.zshrc`, `~/.bashrc`, etc.).

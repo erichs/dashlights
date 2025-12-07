@@ -3,6 +3,7 @@ package signals
 import (
 	"context"
 	"fmt"
+	"os"
 	"runtime"
 	"syscall"
 )
@@ -41,6 +42,11 @@ func (s *DiskSpaceSignal) Remediation() string {
 // Check evaluates disk usage and reports whether disk space is critically low.
 func (s *DiskSpaceSignal) Check(ctx context.Context) bool {
 	_ = ctx
+
+	// Check if this signal is disabled via environment variable
+	if os.Getenv("DASHLIGHTS_DISABLE_DISK_SPACE") != "" {
+		return false
+	}
 
 	// Only applicable on Unix-like systems
 	if runtime.GOOS == "windows" {

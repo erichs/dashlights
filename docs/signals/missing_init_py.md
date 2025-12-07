@@ -127,16 +127,16 @@ python3 -m unittest discover
 **Windows**:
 ```powershell
 # Find directories missing __init__.py
-Get-ChildItem -Recurse -Filter "*.py" | 
+Get-ChildItem -Recurse -Filter "*.py" |
   Where-Object { $_.Name -ne "__init__.py" -and $_.Name -ne "setup.py" } |
-  ForEach-Object { $_.DirectoryName } | 
+  ForEach-Object { $_.DirectoryName } |
   Select-Object -Unique |
   Where-Object { -not (Test-Path "$_\__init__.py") }
 
 # Create __init__.py files
-Get-ChildItem -Recurse -Filter "*.py" | 
+Get-ChildItem -Recurse -Filter "*.py" |
   Where-Object { $_.Name -ne "__init__.py" } |
-  ForEach-Object { $_.DirectoryName } | 
+  ForEach-Object { $_.DirectoryName } |
   Select-Object -Unique |
   Where-Object { -not (Test-Path "$_\__init__.py") } |
   ForEach-Object { New-Item -Path "$_\__init__.py" -ItemType File }
@@ -174,7 +174,7 @@ done
    ```bash
    #!/bin/bash
    # .git/hooks/pre-commit
-   
+
    # Find Python packages missing __init__.py
    missing=$(find . -type f -name "*.py" -not -name "__init__.py" \
      -exec dirname {} \; | sort -u | while read dir; do
@@ -182,7 +182,7 @@ done
        echo "$dir"
      fi
    done)
-   
+
    if [ -n "$missing" ]; then
      echo "Error: Python packages missing __init__.py:"
      echo "$missing"
@@ -226,3 +226,12 @@ scripts/
 # No __init__.py needed here
 ```
 
+
+## Disabling This Signal
+
+To disable this signal, set the environment variable:
+```
+export DASHLIGHTS_DISABLE_MISSING_INIT_PY=1
+```
+
+To disable permanently, add the above line to your shell configuration file (`~/.zshrc`, `~/.bashrc`, etc.).

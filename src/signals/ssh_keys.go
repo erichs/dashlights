@@ -44,6 +44,11 @@ func (s *SSHKeysSignal) Remediation() string {
 func (s *SSHKeysSignal) Check(ctx context.Context) bool {
 	_ = ctx
 
+	// Check if this signal is disabled via environment variable
+	if os.Getenv("DASHLIGHTS_DISABLE_SSH_KEYS") != "" {
+		return false
+	}
+
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return false

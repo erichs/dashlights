@@ -106,7 +106,7 @@ find . -type l ! -exec test -e {} \; -delete
    ```bash
    # Instead of absolute paths
    ln -s /absolute/path/to/file link
-   
+
    # Use relative paths
    ln -s ../relative/path/to/file link
    ```
@@ -134,3 +134,12 @@ find . -type l ! -exec test -e {} \; -delete
    fi
    ```
 
+
+## Disabling This Signal
+
+To disable this signal, set the environment variable:
+```
+export DASHLIGHTS_DISABLE_DANGLING_SYMLINKS=1
+```
+
+To disable permanently, add the above line to your shell configuration file (`~/.zshrc`, `~/.bashrc`, etc.).

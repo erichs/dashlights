@@ -39,6 +39,11 @@ func (s *HistoryPermissionsSignal) Remediation() string {
 func (s *HistoryPermissionsSignal) Check(ctx context.Context) bool {
 	_ = ctx
 
+	// Check if this signal is disabled via environment variable
+	if os.Getenv("DASHLIGHTS_DISABLE_HISTORY_PERMISSIONS") != "" {
+		return false
+	}
+
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return false
