@@ -185,19 +185,91 @@ func buildUserBinDirMap() map[string]string {
 }
 
 func isSystemPath(path string) bool {
-	systemPaths := []string{
-		"/bin",
-		"/sbin",
-		"/usr/bin",
-		"/usr/sbin",
-		"/usr/local/bin",
-		"/usr/local/sbin",
-	}
-
-	for _, sp := range systemPaths {
+	for _, sp := range trustedSystemPaths {
 		if path == sp {
 			return true
 		}
 	}
 	return false
+}
+
+// trustedSystemPaths is the ordered list of system paths that should appear
+// at the beginning of PATH. Order matters: more specific paths first.
+var trustedSystemPaths = []string{
+	"/usr/local/bin",
+	"/usr/local/sbin",
+	"/usr/bin",
+	"/usr/sbin",
+	"/bin",
+	"/sbin",
+}
+
+// SuggestCorrectedPath generates a corrected PATH string with trusted system
+// paths first, followed by user paths. Dangerous entries like '.' and empty
+// segments are removed. Duplicates are eliminated (keeping the first occurrence
+// in the corrected order).
+func SuggestCorrectedPath(currentPath string) string {
+	if currentPath == "" {
+		return strings.Join(trustedSystemPaths, ":")
+	}
+
+	paths := strings.Split(currentPath, string(os.PathListSeparator))
+
+	// Track seen paths to eliminate duplicates
+	seen := make(map[string]bool)
+
+	// Collect system paths that exist in current PATH (preserving trustedSystemPaths order)
+	var systemPaths []string
+	for _, sp := range trustedSystemPaths {
+		for _, p := range paths {
+			if p == sp && !seen[sp] {
+				systemPaths = append(systemPaths, sp)
+				seen[sp] = true
+				break
+			}
+		}
+	}
+
+	// Collect non-system paths, excluding dangerous entries
+	var userPaths []string
+	for _, p := range paths {
+		// Skip empty entries (:: implies current directory)
+		if p == "" {
+			continue
+		}
+		// Skip current directory
+		if p == "." {
+			continue
+		}
+		// Skip if already seen (system path or duplicate)
+		if seen[p] {
+			continue
+		}
+		// Skip system paths (already handled above)
+		if isSystemPath(p) {
+			continue
+		}
+		userPaths = append(userPaths, p)
+		seen[p] = true
+	}
+
+	// Combine: system paths first, then user paths
+	result := append(systemPaths, userPaths...)
+	return strings.Join(result, ":")
+}
+
+// VerboseRemediation returns a ready-to-use export PATH command that fixes
+// the detected PATH ordering issues.
+func (s *PrivilegedPathSignal) VerboseRemediation() string {
+	pathEnv := os.Getenv("PATH")
+	if pathEnv == "" {
+		return ""
+	}
+
+	correctedPath := SuggestCorrectedPath(pathEnv)
+	if correctedPath == "" {
+		return ""
+	}
+
+	return fmt.Sprintf("Run this command to fix your PATH:\n\n   export PATH=\"%s\"\n\nTo make this permanent, add the export command to your shell configuration file (e.g., ~/.zshrc or ~/.bashrc).", correctedPath)
 }

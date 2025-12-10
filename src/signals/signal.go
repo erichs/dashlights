@@ -36,6 +36,16 @@ type Signal interface {
 	Remediation() string
 }
 
+// VerboseRemediator is an optional interface that signals can implement to provide
+// additional actionable remediation guidance when verbose mode is enabled.
+// For example, a signal may return a ready-to-use shell command that fixes the issue.
+type VerboseRemediator interface {
+	// VerboseRemediation returns detailed, actionable remediation guidance.
+	// This may include ready-to-use shell commands or configuration snippets.
+	// Returns an empty string if no additional verbose guidance is available.
+	VerboseRemediation() string
+}
+
 // Result holds the outcome of a signal check
 type Result struct {
 	Signal   Signal
