@@ -225,7 +225,7 @@ source ~/.bashrc
    ```bash
    # Find world-writable files
    find ~ -type f -perm -002 -ls
-   
+
    # Find world-readable files with secrets
    find ~ -name "*secret*" -o -name "*password*" -o -name "*.key" | \
      xargs ls -la
@@ -235,7 +235,7 @@ source ~/.bashrc
    ```bash
    # Set ACL for specific user
    setfacl -m u:username:r-- file.txt
-   
+
    # View ACLs
    getfacl file.txt
    ```
@@ -252,3 +252,12 @@ source ~/.bashrc
    rmdir testdir
    ```
 
+
+## Disabling This Signal
+
+To disable this signal, set the environment variable:
+```
+export DASHLIGHTS_DISABLE_PERMISSIVE_UMASK=1
+```
+
+To disable permanently, add the above line to your shell configuration file (`~/.zshrc`, `~/.bashrc`, etc.).

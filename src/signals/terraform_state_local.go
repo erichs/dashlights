@@ -38,6 +38,11 @@ func (s *TerraformStateLocalSignal) Remediation() string {
 func (s *TerraformStateLocalSignal) Check(ctx context.Context) bool {
 	_ = ctx
 
+	// Check if this signal is disabled via environment variable
+	if os.Getenv("DASHLIGHTS_DISABLE_TERRAFORM_STATE_LOCAL") != "" {
+		return false
+	}
+
 	// Check if terraform.tfstate exists in current directory
 	if _, err := os.Stat("terraform.tfstate"); err == nil {
 		return true

@@ -123,3 +123,12 @@ curl -sL https://example.com/install.sh | vipe | bash
 - **Keep a copy** of any installer scripts you run so you can compare and audit them later.
 - **Review what you run**, especially when copying commands from blogs, gists, or chat.
 
+
+## Disabling This Signal
+
+To disable this signal, set the environment variable:
+```
+export DASHLIGHTS_DISABLE_INSECURE_CURL_PIPE=1
+```
+
+To disable permanently, add the above line to your shell configuration file (`~/.zshrc`, `~/.bashrc`, etc.).

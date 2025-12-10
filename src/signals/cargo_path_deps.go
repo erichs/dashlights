@@ -45,6 +45,11 @@ func (s *CargoPathDepsSignal) Remediation() string {
 func (s *CargoPathDepsSignal) Check(ctx context.Context) bool {
 	_ = ctx
 
+	// Check if this signal is disabled via environment variable
+	if os.Getenv("DASHLIGHTS_DISABLE_CARGO_PATH_DEPS") != "" {
+		return false
+	}
+
 	// Check if Cargo.toml exists in current directory
 	file, err := os.Open("Cargo.toml")
 	if err != nil {

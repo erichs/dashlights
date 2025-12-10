@@ -108,7 +108,7 @@ sudo -l
    ```bash
    # GOOD: Specific elevated command
    sudo apt update
-   
+
    # BAD: Opening a root shell
    sudo -i  # Avoid this
    sudo su  # Avoid this
@@ -125,7 +125,7 @@ sudo -l
    ```bash
    # View sudo logs
    sudo grep sudo /var/log/auth.log
-   
+
    # Or on systems with journald
    sudo journalctl -e _COMM=sudo
    ```
@@ -134,7 +134,7 @@ sudo -l
    ```bash
    # Add user to docker group
    sudo usermod -aG docker $USER
-   
+
    # Log out and back in, then:
    docker ps  # Works without sudo
    ```
@@ -149,3 +149,12 @@ Sometimes root access is necessary. If so:
 4. **Double-check destructive commands**: Especially `rm`, `mv`, `chmod`
 5. **Never run untrusted code as root**: Avoid `curl | bash` patterns
 
+
+## Disabling This Signal
+
+To disable this signal, set the environment variable:
+```
+export DASHLIGHTS_DISABLE_ROOT_LOGIN=1
+```
+
+To disable permanently, add the above line to your shell configuration file (`~/.zshrc`, `~/.bashrc`, etc.).

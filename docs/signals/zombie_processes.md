@@ -111,14 +111,14 @@ void sigchld_handler(int sig) {
 int main() {
     // Install signal handler
     signal(SIGCHLD, sigchld_handler);
-    
+
     // Or use sigaction (better)
     struct sigaction sa;
     sa.sa_handler = sigchld_handler;
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = SA_RESTART | SA_NOCLDSTOP;
     sigaction(SIGCHLD, &sa, NULL);
-    
+
     // Your code that forks children...
 }
 ```
@@ -156,10 +156,10 @@ import (
 func main() {
     cmd := exec.Command("command")
     cmd.Start()
-    
+
     // Always wait for child processes
     defer cmd.Wait()
-    
+
     // Or use goroutine
     go func() {
         cmd.Wait()
@@ -361,3 +361,12 @@ ps -eo pid,ppid,stat,comm | awk '$3 ~ /^Z/ {print $2}' | sort -u | xargs kill -9
 sudo reboot
 ```
 
+
+## Disabling This Signal
+
+To disable this signal, set the environment variable:
+```
+export DASHLIGHTS_DISABLE_ZOMBIE_PROCESSES=1
+```
+
+To disable permanently, add the above line to your shell configuration file (`~/.zshrc`, `~/.bashrc`, etc.).

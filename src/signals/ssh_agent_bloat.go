@@ -54,6 +54,11 @@ func (s *SSHAgentBloatSignal) Remediation() string {
 func (s *SSHAgentBloatSignal) Check(ctx context.Context) bool {
 	_ = ctx
 
+	// Check if this signal is disabled via environment variable
+	if os.Getenv("DASHLIGHTS_DISABLE_SSH_AGENT_BLOAT") != "" {
+		return false
+	}
+
 	// Check if SSH_AUTH_SOCK is set
 	sockPath := os.Getenv("SSH_AUTH_SOCK")
 	if sockPath == "" {

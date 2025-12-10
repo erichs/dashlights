@@ -427,3 +427,15 @@ func TestDockerSocketSignal_LinuxSecurePermissions(t *testing.T) {
 		t.Errorf("Expected false for secure socket permissions, got true. Issue: %s", signal.issue)
 	}
 }
+
+func TestDockerSocketSignal_Disabled(t *testing.T) {
+	os.Setenv("DASHLIGHTS_DISABLE_DOCKER_SOCKET", "1")
+	defer os.Unsetenv("DASHLIGHTS_DISABLE_DOCKER_SOCKET")
+
+	signal := NewDockerSocketSignal()
+	ctx := context.Background()
+
+	if signal.Check(ctx) {
+		t.Error("Expected false when signal is disabled via environment variable")
+	}
+}

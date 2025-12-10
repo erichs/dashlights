@@ -45,6 +45,11 @@ func (s *RootOwnedHomeSignal) Remediation() string {
 func (s *RootOwnedHomeSignal) Check(ctx context.Context) bool {
 	_ = ctx
 
+	// Check if this signal is disabled via environment variable
+	if os.Getenv("DASHLIGHTS_DISABLE_ROOT_OWNED_HOME") != "" {
+		return false
+	}
+
 	// Only applicable on Unix-like systems
 	if runtime.GOOS == "windows" {
 		return false

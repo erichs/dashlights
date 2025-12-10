@@ -255,3 +255,15 @@ contexts:
 		t.Error("Expected true with valid absolute path and kube-system namespace")
 	}
 }
+
+func TestRootKubeContextSignal_Disabled(t *testing.T) {
+	os.Setenv("DASHLIGHTS_DISABLE_ROOT_KUBE_CONTEXT", "1")
+	defer os.Unsetenv("DASHLIGHTS_DISABLE_ROOT_KUBE_CONTEXT")
+
+	signal := NewRootKubeContextSignal()
+	ctx := context.Background()
+
+	if signal.Check(ctx) {
+		t.Error("Expected false when signal is disabled via environment variable")
+	}
+}

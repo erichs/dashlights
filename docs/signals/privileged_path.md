@@ -191,7 +191,7 @@ ls -ld ~/bin ~/.local/bin
    ```bash
    # Bad
    export PATH=".:$PATH"
-   
+
    # Good - use explicit paths
    ./mycommand
    ```
@@ -231,7 +231,7 @@ ls -ld ~/bin ~/.local/bin
    # Check which version of a command will run
    which ls
    # Should show: /bin/ls (not /tmp/ls)
-   
+
    # Check all versions in PATH
    which -a ls
    ```
@@ -240,7 +240,7 @@ ls -ld ~/bin ~/.local/bin
    ```bash
    # Edit /etc/sudoers (use visudo)
    sudo visudo
-   
+
    # Add or modify secure_path
    Defaults secure_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
    ```
@@ -263,3 +263,12 @@ ls -ld ~/bin ~/.local/bin
 
 4. **Investigate** how the attacker gained write access
 
+
+## Disabling This Signal
+
+To disable this signal, set the environment variable:
+```
+export DASHLIGHTS_DISABLE_PRIVILEGED_PATH=1
+```
+
+To disable permanently, add the above line to your shell configuration file (`~/.zshrc`, `~/.bashrc`, etc.).

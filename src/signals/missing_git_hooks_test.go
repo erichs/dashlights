@@ -502,3 +502,15 @@ func TestHasInstalledHooks_DetectsVariousHookTypes(t *testing.T) {
 		})
 	}
 }
+
+func TestMissingGitHooksSignal_Disabled(t *testing.T) {
+	os.Setenv("DASHLIGHTS_DISABLE_MISSING_GIT_HOOKS", "1")
+	defer os.Unsetenv("DASHLIGHTS_DISABLE_MISSING_GIT_HOOKS")
+
+	signal := NewMissingGitHooksSignal()
+	ctx := context.Background()
+
+	if signal.Check(ctx) {
+		t.Error("Expected false when signal is disabled via environment variable")
+	}
+}

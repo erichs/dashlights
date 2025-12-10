@@ -162,3 +162,15 @@ func TestDangerousTFVarSignal_Metadata(t *testing.T) {
 		t.Error("Remediation should not be empty")
 	}
 }
+
+func TestDangerousTFVarSignal_Disabled(t *testing.T) {
+	os.Setenv("DASHLIGHTS_DISABLE_DANGEROUS_TF_VAR", "1")
+	defer os.Unsetenv("DASHLIGHTS_DISABLE_DANGEROUS_TF_VAR")
+
+	signal := NewDangerousTFVarSignal()
+	ctx := context.Background()
+
+	if signal.Check(ctx) {
+		t.Error("Expected false when signal is disabled via environment variable")
+	}
+}

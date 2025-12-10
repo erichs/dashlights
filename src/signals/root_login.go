@@ -35,6 +35,11 @@ func (s *RootLoginSignal) Remediation() string {
 
 // Check reports whether the effective user ID is root.
 func (s *RootLoginSignal) Check(ctx context.Context) bool {
+	// Check if this signal is disabled via environment variable
+	if os.Getenv("DASHLIGHTS_DISABLE_ROOT_LOGIN") != "" {
+		return false
+	}
+
 	// Check for context cancellation
 	select {
 	case <-ctx.Done():

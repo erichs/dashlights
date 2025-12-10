@@ -53,6 +53,11 @@ func (s *InsecureCurlPipeSignal) Remediation() string {
 
 // Check inspects recent shell history for insecure curl pipe patterns.
 func (s *InsecureCurlPipeSignal) Check(ctx context.Context) bool {
+	// Check if this signal is disabled via environment variable
+	if os.Getenv("DASHLIGHTS_DISABLE_INSECURE_CURL_PIPE") != "" {
+		return false
+	}
+
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return false

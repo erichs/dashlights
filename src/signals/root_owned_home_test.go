@@ -98,3 +98,15 @@ func TestRootOwnedHomeSignal_Check_NoHomeDir(t *testing.T) {
 		t.Error("Expected false when HOME is not set")
 	}
 }
+
+func TestRootOwnedHomeSignal_Disabled(t *testing.T) {
+	os.Setenv("DASHLIGHTS_DISABLE_ROOT_OWNED_HOME", "1")
+	defer os.Unsetenv("DASHLIGHTS_DISABLE_ROOT_OWNED_HOME")
+
+	signal := NewRootOwnedHomeSignal()
+	ctx := context.Background()
+
+	if signal.Check(ctx) {
+		t.Error("Expected false when signal is disabled via environment variable")
+	}
+}

@@ -245,7 +245,7 @@ ssh-add $env:USERPROFILE\.ssh\id_ed25519
    ```bash
    # Check weekly
    ssh-add -l
-   
+
    # Remove unused keys
    ssh-add -D
    ```
@@ -314,3 +314,12 @@ echo 'ssh-add ~/.ssh/id_ed25519' >> ~/.bashrc
 5. **Monitor SSH agent** for unauthorized key additions
 6. **Use certificate-based authentication** for large deployments
 
+
+## Disabling This Signal
+
+To disable this signal, set the environment variable:
+```
+export DASHLIGHTS_DISABLE_SSH_AGENT_BLOAT=1
+```
+
+To disable permanently, add the above line to your shell configuration file (`~/.zshrc`, `~/.bashrc`, etc.).

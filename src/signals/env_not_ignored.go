@@ -39,6 +39,11 @@ func (s *EnvNotIgnoredSignal) Remediation() string {
 func (s *EnvNotIgnoredSignal) Check(ctx context.Context) bool {
 	_ = ctx
 
+	// Check if this signal is disabled via environment variable
+	if os.Getenv("DASHLIGHTS_DISABLE_ENV_NOT_IGNORED") != "" {
+		return false
+	}
+
 	// Check if .env exists in current directory
 	if _, err := os.Stat(".env"); os.IsNotExist(err) {
 		return false

@@ -90,6 +90,11 @@ func (s *ZombieProcessesSignal) Remediation() string {
 
 // Check reports whether the system has an excessive number of zombie processes.
 func (s *ZombieProcessesSignal) Check(ctx context.Context) bool {
+	// Check if this signal is disabled via environment variable
+	if os.Getenv("DASHLIGHTS_DISABLE_ZOMBIE_PROCESSES") != "" {
+		return false
+	}
+
 	// Only applicable on Linux
 	if runtime.GOOS != "linux" {
 		return false

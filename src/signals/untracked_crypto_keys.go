@@ -45,6 +45,11 @@ func (s *UntrackedCryptoKeysSignal) Remediation() string {
 func (s *UntrackedCryptoKeysSignal) Check(ctx context.Context) bool {
 	_ = ctx
 
+	// Check if this signal is disabled via environment variable
+	if os.Getenv("DASHLIGHTS_DISABLE_UNTRACKED_CRYPTO_KEYS") != "" {
+		return false
+	}
+
 	s.foundKeys = []string{}
 
 	// Key file extensions to look for

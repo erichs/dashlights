@@ -2,6 +2,7 @@ package signals
 
 import (
 	"context"
+	"os"
 	"testing"
 	"time"
 )
@@ -110,5 +111,123 @@ func TestGetDetected(t *testing.T) {
 
 	if detected[1].Signal.Name() != "sig3" {
 		t.Errorf("Expected second detected signal to be 'sig3', got '%s'", detected[1].Signal.Name())
+	}
+}
+
+// TestSignalDisableEnvVar tests that signals can be disabled via environment variables
+func TestSignalDisableEnvVar(t *testing.T) {
+	testCases := []struct {
+		name       string
+		envVar     string
+		newSignal  func() Signal
+		setupCheck func() // Optional setup to ensure signal would normally trigger
+		cleanup    func() // Optional cleanup after test
+	}{
+		{
+			name:      "DebugEnabled",
+			envVar:    "DASHLIGHTS_DISABLE_DEBUG_ENABLED",
+			newSignal: func() Signal { return NewDebugEnabledSignal() },
+			setupCheck: func() {
+				os.Setenv("DEBUG", "1")
+			},
+			cleanup: func() {
+				os.Unsetenv("DEBUG")
+			},
+		},
+		{
+			name:      "ProxyActive",
+			envVar:    "DASHLIGHTS_DISABLE_PROXY_ACTIVE",
+			newSignal: func() Signal { return NewProxyActiveSignal() },
+			setupCheck: func() {
+				os.Setenv("HTTP_PROXY", "http://proxy.example.com:8080")
+			},
+			cleanup: func() {
+				os.Unsetenv("HTTP_PROXY")
+			},
+		},
+		{
+			name:      "HistoryDisabled",
+			envVar:    "DASHLIGHTS_DISABLE_HISTORY_DISABLED",
+			newSignal: func() Signal { return NewHistoryDisabledSignal() },
+			setupCheck: func() {
+				os.Setenv("HISTFILE", "/dev/null")
+			},
+			cleanup: func() {
+				os.Unsetenv("HISTFILE")
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup: ensure signal would normally trigger
+			if tc.setupCheck != nil {
+				tc.setupCheck()
+			}
+			if tc.cleanup != nil {
+				defer tc.cleanup()
+			}
+
+			ctx := context.Background()
+
+			// First, verify signal triggers without disable env var
+			signal := tc.newSignal()
+			resultWithoutDisable := signal.Check(ctx)
+			if !resultWithoutDisable {
+				t.Skipf("Signal %s did not trigger in test environment, skipping disable test", tc.name)
+			}
+
+			// Now set the disable env var
+			os.Setenv(tc.envVar, "1")
+			defer os.Unsetenv(tc.envVar)
+
+			// Create new signal instance and check again
+			signal = tc.newSignal()
+			resultWithDisable := signal.Check(ctx)
+
+			if resultWithDisable {
+				t.Errorf("Signal %s should return false when %s is set", tc.name, tc.envVar)
+			}
+		})
+	}
+}
+
+// TestSignalDisableEnvVarAnyValue tests that any non-empty value disables the signal
+func TestSignalDisableEnvVarAnyValue(t *testing.T) {
+	testValues := []string{"1", "true", "yes", "anything", "0", "false"}
+
+	for _, value := range testValues {
+		t.Run("value_"+value, func(t *testing.T) {
+			// Use DebugEnabled as a representative signal
+			os.Setenv("DEBUG", "1") // Ensure signal would trigger
+			defer os.Unsetenv("DEBUG")
+
+			os.Setenv("DASHLIGHTS_DISABLE_DEBUG_ENABLED", value)
+			defer os.Unsetenv("DASHLIGHTS_DISABLE_DEBUG_ENABLED")
+
+			signal := NewDebugEnabledSignal()
+			ctx := context.Background()
+
+			if signal.Check(ctx) {
+				t.Errorf("Signal should be disabled when DASHLIGHTS_DISABLE_DEBUG_ENABLED=%s", value)
+			}
+		})
+	}
+}
+
+// TestSignalNotDisabledWhenEnvVarEmpty tests that empty env var does not disable signal
+func TestSignalNotDisabledWhenEnvVarEmpty(t *testing.T) {
+	// Ensure the disable env var is not set
+	os.Unsetenv("DASHLIGHTS_DISABLE_DEBUG_ENABLED")
+
+	// Set DEBUG to trigger the signal
+	os.Setenv("DEBUG", "1")
+	defer os.Unsetenv("DEBUG")
+
+	signal := NewDebugEnabledSignal()
+	ctx := context.Background()
+
+	if !signal.Check(ctx) {
+		t.Error("Signal should trigger when disable env var is not set")
 	}
 }

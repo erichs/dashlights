@@ -44,6 +44,11 @@ func (s *WorldWritableConfigSignal) Remediation() string {
 func (s *WorldWritableConfigSignal) Check(ctx context.Context) bool {
 	_ = ctx
 
+	// Check if this signal is disabled via environment variable
+	if os.Getenv("DASHLIGHTS_DISABLE_WORLD_WRITABLE_CONFIG") != "" {
+		return false
+	}
+
 	// Only applicable on Unix-like systems
 	if runtime.GOOS == "windows" {
 		return false

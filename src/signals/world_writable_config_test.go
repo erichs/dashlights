@@ -144,3 +144,15 @@ func TestWorldWritableConfigSignal_Check_WorldWritable(t *testing.T) {
 		t.Error("Expected foundFiles to contain .bashrc")
 	}
 }
+
+func TestWorldWritableConfigSignal_Disabled(t *testing.T) {
+	os.Setenv("DASHLIGHTS_DISABLE_WORLD_WRITABLE_CONFIG", "1")
+	defer os.Unsetenv("DASHLIGHTS_DISABLE_WORLD_WRITABLE_CONFIG")
+
+	signal := NewWorldWritableConfigSignal()
+	ctx := context.Background()
+
+	if signal.Check(ctx) {
+		t.Error("Expected false when signal is disabled via environment variable")
+	}
+}

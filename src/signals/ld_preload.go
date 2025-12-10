@@ -41,6 +41,11 @@ func (s *LDPreloadSignal) Remediation() string {
 func (s *LDPreloadSignal) Check(ctx context.Context) bool {
 	_ = ctx
 
+	// Check if this signal is disabled via environment variable
+	if os.Getenv("DASHLIGHTS_DISABLE_LD_PRELOAD") != "" {
+		return false
+	}
+
 	// Check LD_PRELOAD on Linux
 	if runtime.GOOS == "linux" {
 		if val := os.Getenv("LD_PRELOAD"); val != "" {

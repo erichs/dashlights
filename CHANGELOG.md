@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0-alpha.8] - 2025-12-09
+
+### Added
+- Added DumpsterFire and RottingSecrets security signals
+
+### Changed
+- Provided detailed remediation guidance for the privileged_path signal
+- Supported selective disabling of specific signal checks
+- Addressed linter issues for improved code quality
+
+### Fixed
+- Updated README documentation
+
+
 ## [1.0.0-alpha.7] - 2025-12-04
 
 ### Added

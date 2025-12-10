@@ -313,3 +313,12 @@ ssh-add $env:USERPROFILE\.ssh\id_ed25519
 - **Secretive**: macOS app for Secure Enclave keys
 - **ssh-vault**: Encrypt SSH keys at rest
 
+
+## Disabling This Signal
+
+To disable this signal, set the environment variable:
+```
+export DASHLIGHTS_DISABLE_SSH_KEYS=1
+```
+
+To disable permanently, add the above line to your shell configuration file (`~/.zshrc`, `~/.bashrc`, etc.).

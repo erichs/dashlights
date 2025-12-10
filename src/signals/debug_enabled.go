@@ -38,6 +38,11 @@ func (s *DebugEnabledSignal) Remediation() string {
 func (s *DebugEnabledSignal) Check(ctx context.Context) bool {
 	_ = ctx
 
+	// Check if this signal is disabled via environment variable
+	if os.Getenv("DASHLIGHTS_DISABLE_DEBUG_ENABLED") != "" {
+		return false
+	}
+
 	// Check for common debug environment variables
 	// The actual value doesn't matter - just that they are set
 	debugVars := []string{

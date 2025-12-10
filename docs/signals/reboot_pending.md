@@ -215,10 +215,10 @@ sudo systemctl start reboot.timer
    ```bash
    # Install unattended-upgrades
    sudo apt install unattended-upgrades
-   
+
    # Configure automatic reboots
    sudo dpkg-reconfigure -plow unattended-upgrades
-   
+
    # Edit /etc/apt/apt.conf.d/50unattended-upgrades
    Unattended-Upgrade::Automatic-Reboot "true";
    Unattended-Upgrade::Automatic-Reboot-Time "03:00";
@@ -228,7 +228,7 @@ sudo systemctl start reboot.timer
    ```bash
    # Check system uptime
    uptime
-   
+
    # Alert if uptime is too long (>30 days)
    if [ $(awk '{print int($1)}' /proc/uptime) -gt 2592000 ]; then
      echo "System uptime exceeds 30 days - reboot needed"
@@ -244,7 +244,7 @@ sudo systemctl start reboot.timer
    ```bash
    # Ubuntu Livepatch (requires Ubuntu Pro)
    sudo ua enable livepatch
-   
+
    # Or use KernelCare, Ksplice, etc.
    ```
 
@@ -252,10 +252,10 @@ sudo systemctl start reboot.timer
    ```bash
    # Send wall message
    sudo wall "System will reboot in 10 minutes for security updates"
-   
+
    # Wait 10 minutes
    sleep 600
-   
+
    # Reboot
    sudo reboot
    ```
@@ -294,3 +294,12 @@ sudo systemctl start reboot.timer
    sudo apt list --upgradable | grep linux-image
    ```
 
+
+## Disabling This Signal
+
+To disable this signal, set the environment variable:
+```
+export DASHLIGHTS_DISABLE_REBOOT_PENDING=1
+```
+
+To disable permanently, add the above line to your shell configuration file (`~/.zshrc`, `~/.bashrc`, etc.).

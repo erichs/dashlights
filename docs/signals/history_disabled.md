@@ -217,3 +217,12 @@ sudo auditctl -a always,exit -F arch=b64 -S execve -k commands
 # - Datadog
 ```
 
+
+## Disabling This Signal
+
+To disable this signal, set the environment variable:
+```
+export DASHLIGHTS_DISABLE_HISTORY_DISABLED=1
+```
+
+To disable permanently, add the above line to your shell configuration file (`~/.zshrc`, `~/.bashrc`, etc.).

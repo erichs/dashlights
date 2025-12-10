@@ -45,6 +45,11 @@ func (s *GoReplaceSignal) Remediation() string {
 func (s *GoReplaceSignal) Check(ctx context.Context) bool {
 	_ = ctx
 
+	// Check if this signal is disabled via environment variable
+	if os.Getenv("DASHLIGHTS_DISABLE_GO_REPLACE") != "" {
+		return false
+	}
+
 	// Check if go.mod exists in current directory
 	file, err := os.Open("go.mod")
 	if err != nil {

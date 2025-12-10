@@ -110,7 +110,7 @@ rm terraform.tfstate terraform.tfstate.backup
 terraform {
   cloud {
     organization = "my-org"
-    
+
     workspaces {
       name = "my-project"
     }
@@ -309,7 +309,7 @@ If state was committed, assume all secrets are compromised:
        key = "dev/terraform.tfstate"
      }
    }
-   
+
    # Production
    terraform {
      backend "s3" {
@@ -384,3 +384,12 @@ terraform state push backup.tfstate
 - [ ] Test Terraform operations
 - [ ] Document backend configuration for team
 
+
+## Disabling This Signal
+
+To disable this signal, set the environment variable:
+```
+export DASHLIGHTS_DISABLE_TERRAFORM_STATE_LOCAL=1
+```
+
+To disable permanently, add the above line to your shell configuration file (`~/.zshrc`, `~/.bashrc`, etc.).

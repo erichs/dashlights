@@ -168,3 +168,15 @@ func TestSSHKeysSignal_formatPerms(t *testing.T) {
 		}
 	}
 }
+
+func TestSSHKeysSignal_Disabled(t *testing.T) {
+	os.Setenv("DASHLIGHTS_DISABLE_SSH_KEYS", "1")
+	defer os.Unsetenv("DASHLIGHTS_DISABLE_SSH_KEYS")
+
+	signal := NewSSHKeysSignal()
+	ctx := context.Background()
+
+	if signal.Check(ctx) {
+		t.Error("Expected false when signal is disabled via environment variable")
+	}
+}

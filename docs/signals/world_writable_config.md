@@ -215,7 +215,7 @@ chmod 644 ~/.tmux.conf   # -rw-r--r--
    ```bash
    # Bad
    chmod 666 ~/.bashrc  # ✗ World-writable
-   
+
    # Good
    chmod 644 ~/.bashrc  # ✓ Owner can write, others can read
    chmod 600 ~/.bashrc  # ✓ Only owner can access (most secure)
@@ -233,7 +233,7 @@ chmod 644 ~/.tmux.conf   # -rw-r--r--
    ```bash
    # Add to weekly checklist
    find ~ -type f -perm -002 -ls
-   
+
    # Or add to cron
    0 0 * * 0 find ~ -type f -perm -002 -ls | mail -s "World-writable files" you@example.com
    ```
@@ -245,7 +245,7 @@ chmod 644 ~/.tmux.conf   # -rw-r--r--
    git init
    git add .bashrc .zshrc .gitconfig
    git commit -m "Initial config"
-   
+
    # Can track unauthorized changes
    git diff
    ```
@@ -341,3 +341,12 @@ chmod +x fix-config-permissions.sh
 ./fix-config-permissions.sh
 ```
 
+
+## Disabling This Signal
+
+To disable this signal, set the environment variable:
+```
+export DASHLIGHTS_DISABLE_WORLD_WRITABLE_CONFIG=1
+```
+
+To disable permanently, add the above line to your shell configuration file (`~/.zshrc`, `~/.bashrc`, etc.).

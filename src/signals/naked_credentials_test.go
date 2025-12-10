@@ -266,3 +266,15 @@ func TestNakedCredentialsSignal_Check_RawSecretStillDetected(t *testing.T) {
 		t.Error("Expected STRIPE_SECRET_KEY in foundVars when it's a raw secret")
 	}
 }
+
+func TestNakedCredentialsSignal_Disabled(t *testing.T) {
+	os.Setenv("DASHLIGHTS_DISABLE_NAKED_CREDENTIALS", "1")
+	defer os.Unsetenv("DASHLIGHTS_DISABLE_NAKED_CREDENTIALS")
+
+	signal := NewNakedCredentialsSignal()
+	ctx := context.Background()
+
+	if signal.Check(ctx) {
+		t.Error("Expected false when signal is disabled via environment variable")
+	}
+}

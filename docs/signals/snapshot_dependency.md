@@ -274,3 +274,12 @@ Snapshots are only acceptable in:
 
 Even then, document why and when they'll be removed.
 
+
+## Disabling This Signal
+
+To disable this signal, set the environment variable:
+```
+export DASHLIGHTS_DISABLE_SNAPSHOT_DEPENDENCY=1
+```
+
+To disable permanently, add the above line to your shell configuration file (`~/.zshrc`, `~/.bashrc`, etc.).

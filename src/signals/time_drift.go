@@ -37,6 +37,11 @@ func (s *TimeDriftSignal) Remediation() string {
 
 // Check measures drift between system time and filesystem modification time.
 func (s *TimeDriftSignal) Check(ctx context.Context) bool {
+	// Check if this signal is disabled via environment variable
+	if os.Getenv("DASHLIGHTS_DISABLE_TIME_DRIFT") != "" {
+		return false
+	}
+
 	// Respect context cancellation before performing filesystem operations.
 	select {
 	case <-ctx.Done():

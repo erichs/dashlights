@@ -1,6 +1,6 @@
 # Security Signals
 
-Dashlights performs over 30 concurrent security checks, organized into five categories:
+Dashlights performs over 35 concurrent security checks, organized into six categories:
 
 ## Identity & Access Management (IAM)
 
@@ -51,4 +51,9 @@ Dashlights performs over 30 concurrent security checks, organized into five cate
 33. 🏗️ **[Local Terraform State](docs/signals/terraform_state_local.md)** - Checks for local terraform.tfstate files (should use remote state) [[code](src/signals/terraform_state_local.go)]
 34. ☸️ **[Root Kube Context](docs/signals/root_kube_context.md)** - Alerts when Kubernetes context uses kube-system namespace [[code](src/signals/root_kube_context.go)]
 35. 🔐 **[Dangerous TF_VAR](docs/signals/dangerous_tf_var.md)** - Checks for dangerous Terraform variables in environment (secrets in shell history) [[code](src/signals/dangerous_tf_var.go)]
+
+## Data Sprawl
+
+36. 🗑️ **[Dumpster Fire](docs/signals/dumpster_fire.md)** - Detects sensitive files (dumps, logs, keys) in hot zones (Downloads, Desktop, $PWD, /tmp) [[code](src/signals/dumpster_fire.go)]
+37. 🦴 **[Rotting Secrets](docs/signals/rotting_secrets.md)** - Detects old (>7 days) sensitive files that may have been forgotten [[code](src/signals/rotting_secrets.go)]
 

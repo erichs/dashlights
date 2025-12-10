@@ -197,3 +197,15 @@ func TestNpmrcTokensSignal_OnlyComments(t *testing.T) {
 		t.Error("Expected false when .npmrc has only comments")
 	}
 }
+
+func TestNpmrcTokensSignal_Disabled(t *testing.T) {
+	os.Setenv("DASHLIGHTS_DISABLE_NPMRC_TOKENS", "1")
+	defer os.Unsetenv("DASHLIGHTS_DISABLE_NPMRC_TOKENS")
+
+	signal := NewNpmrcTokensSignal()
+	ctx := context.Background()
+
+	if signal.Check(ctx) {
+		t.Error("Expected false when signal is disabled via environment variable")
+	}
+}

@@ -39,6 +39,11 @@ func (s *HistoryDisabledSignal) Remediation() string {
 func (s *HistoryDisabledSignal) Check(ctx context.Context) bool {
 	_ = ctx
 
+	// Check if this signal is disabled via environment variable
+	if os.Getenv("DASHLIGHTS_DISABLE_HISTORY_DISABLED") != "" {
+		return false
+	}
+
 	// Check if HISTFILE is unset or set to /dev/null
 	histfile := os.Getenv("HISTFILE")
 	if histfile == "/dev/null" {

@@ -186,3 +186,15 @@ func writeHistory(t *testing.T, shellName string, lines []string) func() {
 		os.Setenv("SHELL", oldShell)
 	}
 }
+
+func TestInsecureCurlPipeSignal_Disabled(t *testing.T) {
+	os.Setenv("DASHLIGHTS_DISABLE_INSECURE_CURL_PIPE", "1")
+	defer os.Unsetenv("DASHLIGHTS_DISABLE_INSECURE_CURL_PIPE")
+
+	signal := NewInsecureCurlPipeSignal()
+	ctx := context.Background()
+
+	if signal.Check(ctx) {
+		t.Error("Expected false when signal is disabled via environment variable")
+	}
+}

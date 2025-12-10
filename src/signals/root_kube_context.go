@@ -46,6 +46,11 @@ func (s *RootKubeContextSignal) Remediation() string {
 
 // Check parses kubeconfig to see if the current context targets the kube-system namespace.
 func (s *RootKubeContextSignal) Check(ctx context.Context) bool {
+	// Check if this signal is disabled via environment variable
+	if os.Getenv("DASHLIGHTS_DISABLE_ROOT_KUBE_CONTEXT") != "" {
+		return false
+	}
+
 	kubeConfig, err := homedirutil.SafeHomePath(".kube", "config")
 	if err != nil {
 		return false
@@ -105,7 +110,6 @@ func (s *RootKubeContextSignal) Check(ctx context.Context) bool {
 		// Start of a new context entry (- context: or - name:)
 		if strings.HasPrefix(trimmed, "- context:") || strings.HasPrefix(trimmed, "- name:") {
 			inContextEntry = true
-			contextName = ""
 			contextNamespace = ""
 		}
 

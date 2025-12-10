@@ -42,6 +42,11 @@ func (s *PyCachePollutionSignal) Remediation() string {
 
 // Check walks the repository for tracked __pycache__ directories.
 func (s *PyCachePollutionSignal) Check(ctx context.Context) bool {
+	// Check if this signal is disabled via environment variable
+	if os.Getenv("DASHLIGHTS_DISABLE_PYCACHE_POLLUTION") != "" {
+		return false
+	}
+
 	s.foundDirs = []string{}
 
 	// Check if we're in a git repository

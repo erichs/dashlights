@@ -226,3 +226,15 @@ func TestMissingInitPySignal_MultipleMissing(t *testing.T) {
 		t.Error("Expected true when multiple packages missing __init__.py")
 	}
 }
+
+func TestMissingInitPySignal_Disabled(t *testing.T) {
+	os.Setenv("DASHLIGHTS_DISABLE_MISSING_INIT_PY", "1")
+	defer os.Unsetenv("DASHLIGHTS_DISABLE_MISSING_INIT_PY")
+
+	signal := NewMissingInitPySignal()
+	ctx := context.Background()
+
+	if signal.Check(ctx) {
+		t.Error("Expected false when signal is disabled via environment variable")
+	}
+}

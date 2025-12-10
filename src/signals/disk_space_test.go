@@ -2,6 +2,7 @@ package signals
 
 import (
 	"context"
+	"os"
 	"runtime"
 	"testing"
 )
@@ -78,5 +79,17 @@ func TestDiskSpaceSignal_checkPath(t *testing.T) {
 	// Check invalid path - should return false
 	if signal.checkPath("/nonexistent/path/that/does/not/exist") {
 		t.Error("Expected false for nonexistent path")
+	}
+}
+
+func TestDiskSpaceSignal_Disabled(t *testing.T) {
+	os.Setenv("DASHLIGHTS_DISABLE_DISK_SPACE", "1")
+	defer os.Unsetenv("DASHLIGHTS_DISABLE_DISK_SPACE")
+
+	signal := NewDiskSpaceSignal()
+	ctx := context.Background()
+
+	if signal.Check(ctx) {
+		t.Error("Expected false when signal is disabled via environment variable")
 	}
 }

@@ -164,3 +164,12 @@ fi
 4. **Test in a clean environment** before committing
 5. **Review go.mod changes** carefully in pull requests
 
+
+## Disabling This Signal
+
+To disable this signal, set the environment variable:
+```
+export DASHLIGHTS_DISABLE_GO_REPLACE=1
+```
+
+To disable permanently, add the above line to your shell configuration file (`~/.zshrc`, `~/.bashrc`, etc.).

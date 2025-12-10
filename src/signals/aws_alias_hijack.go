@@ -42,6 +42,11 @@ func (s *AWSAliasHijackSignal) Remediation() string {
 
 // Check inspects the AWS CLI alias file for dangerous overrides or permissions issues.
 func (s *AWSAliasHijackSignal) Check(ctx context.Context) bool {
+	// Check if this signal is disabled via environment variable
+	if os.Getenv("DASHLIGHTS_DISABLE_AWS_ALIAS_HIJACK") != "" {
+		return false
+	}
+
 	// Core AWS commands that should never be aliased (potential hijacking)
 	coreCommands := map[string]bool{
 		"cloudformation": true,

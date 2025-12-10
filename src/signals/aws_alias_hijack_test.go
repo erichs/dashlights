@@ -248,3 +248,15 @@ func TestAWSAliasHijackSignal_ValidAbsolutePath(t *testing.T) {
 		t.Error("Expected true with valid absolute path and hijacked alias")
 	}
 }
+
+func TestAWSAliasHijackSignal_Disabled(t *testing.T) {
+	os.Setenv("DASHLIGHTS_DISABLE_AWS_ALIAS_HIJACK", "1")
+	defer os.Unsetenv("DASHLIGHTS_DISABLE_AWS_ALIAS_HIJACK")
+
+	signal := NewAWSAliasHijackSignal()
+	ctx := context.Background()
+
+	if signal.Check(ctx) {
+		t.Error("Expected false when signal is disabled via environment variable")
+	}
+}

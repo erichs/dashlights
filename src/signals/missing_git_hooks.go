@@ -46,6 +46,11 @@ func (s *MissingGitHooksSignal) Remediation() string {
 
 // Check looks for hook configuration without corresponding installed hooks.
 func (s *MissingGitHooksSignal) Check(ctx context.Context) bool {
+	// Check if this signal is disabled via environment variable
+	if os.Getenv("DASHLIGHTS_DISABLE_MISSING_GIT_HOOKS") != "" {
+		return false
+	}
+
 	// Check context cancellation early
 	select {
 	case <-ctx.Done():

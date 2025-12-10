@@ -167,11 +167,11 @@ export KUBECONFIG=~/.kube/config-prod
 # Add to ~/.bashrc or ~/.zshrc
 kubectl() {
   local context=$(command kubectl config current-context)
-  
+
   # Check if using admin context
   if [[ "$context" == *"admin"* ]] || [[ "$context" == *"prod"* ]]; then
     echo "⚠️  WARNING: Using admin/production context: $context"
-    
+
     # Require confirmation for destructive operations
     if [[ "$1" == "delete" ]] || [[ "$1" == "apply" ]]; then
       read -p "Are you sure? (yes/no): " confirm
@@ -181,7 +181,7 @@ kubectl() {
       fi
     fi
   fi
-  
+
   command kubectl "$@"
 }
 ```
@@ -294,3 +294,12 @@ az aks get-credentials --resource-group my-rg --name my-cluster
 5. **Have a rollback plan**
 6. **Notify team** before making cluster-wide changes
 
+
+## Disabling This Signal
+
+To disable this signal, set the environment variable:
+```
+export DASHLIGHTS_DISABLE_ROOT_KUBE_CONTEXT=1
+```
+
+To disable permanently, add the above line to your shell configuration file (`~/.zshrc`, `~/.bashrc`, etc.).

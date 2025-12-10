@@ -497,3 +497,135 @@ func TestPrivilegedPathSignal_isSystemPath(t *testing.T) {
 		}
 	}
 }
+
+func TestPrivilegedPathSignal_Disabled(t *testing.T) {
+	os.Setenv("DASHLIGHTS_DISABLE_PRIVILEGED_PATH", "1")
+	defer os.Unsetenv("DASHLIGHTS_DISABLE_PRIVILEGED_PATH")
+
+	signal := NewPrivilegedPathSignal()
+	ctx := context.Background()
+
+	if signal.Check(ctx) {
+		t.Error("Expected false when signal is disabled via environment variable")
+	}
+}
+
+func TestSuggestCorrectedPath(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "empty path returns system paths only",
+			input:    "",
+			expected: "/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin",
+		},
+		{
+			name:     "removes dot from path",
+			input:    ".:/usr/bin:/usr/local/bin",
+			expected: "/usr/local/bin:/usr/bin",
+		},
+		{
+			name:     "removes empty segments",
+			input:    "/usr/bin::/usr/local/bin",
+			expected: "/usr/local/bin:/usr/bin",
+		},
+		{
+			name:     "reorders system paths before user paths",
+			input:    "/home/user/bin:/usr/bin:/usr/local/bin:/custom/path",
+			expected: "/usr/local/bin:/usr/bin:/home/user/bin:/custom/path",
+		},
+		{
+			name:     "removes duplicates",
+			input:    "/usr/bin:/home/user/bin:/usr/bin:/home/user/bin",
+			expected: "/usr/bin:/home/user/bin",
+		},
+		{
+			name:     "preserves all system paths in correct order",
+			input:    "/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin",
+			expected: "/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin",
+		},
+		{
+			name:     "handles path with only system paths in wrong order",
+			input:    "/bin:/usr/local/bin:/usr/bin",
+			expected: "/usr/local/bin:/usr/bin:/bin",
+		},
+		{
+			name:     "handles complex path with all issues",
+			input:    ".:/home/user/bin::/usr/bin:/usr/local/bin:/opt/bin:/usr/bin:/home/user/bin",
+			expected: "/usr/local/bin:/usr/bin:/home/user/bin:/opt/bin",
+		},
+		{
+			name:     "preserves user paths order after system paths",
+			input:    "/custom1:/usr/bin:/custom2:/custom3",
+			expected: "/usr/bin:/custom1:/custom2:/custom3",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := SuggestCorrectedPath(tt.input)
+			if result != tt.expected {
+				t.Errorf("SuggestCorrectedPath(%q)\n  got:      %q\n  expected: %q", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestPrivilegedPathSignal_VerboseRemediation(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping non-Windows test on Windows")
+	}
+
+	t.Run("returns export command when PATH has issues", func(t *testing.T) {
+		oldPath := os.Getenv("PATH")
+		defer os.Setenv("PATH", oldPath)
+
+		// Set a problematic PATH
+		os.Setenv("PATH", "/home/user/bin:/usr/bin:/usr/local/bin")
+
+		signal := NewPrivilegedPathSignal()
+		ctx := context.Background()
+		signal.Check(ctx) // Ensure check has run
+
+		result := signal.VerboseRemediation()
+
+		if !strings.Contains(result, "export PATH=") {
+			t.Errorf("Expected VerboseRemediation to contain 'export PATH=', got %q", result)
+		}
+		if !strings.Contains(result, "/usr/local/bin") {
+			t.Errorf("Expected VerboseRemediation to contain '/usr/local/bin', got %q", result)
+		}
+		if !strings.Contains(result, "/usr/bin") {
+			t.Errorf("Expected VerboseRemediation to contain '/usr/bin', got %q", result)
+		}
+		if !strings.Contains(result, "~/.zshrc") {
+			t.Errorf("Expected VerboseRemediation to mention shell config file, got %q", result)
+		}
+	})
+
+	t.Run("returns empty string when PATH is empty", func(t *testing.T) {
+		oldPath := os.Getenv("PATH")
+		defer os.Setenv("PATH", oldPath)
+
+		os.Setenv("PATH", "")
+
+		signal := NewPrivilegedPathSignal()
+		result := signal.VerboseRemediation()
+
+		if result != "" {
+			t.Errorf("Expected empty string when PATH is empty, got %q", result)
+		}
+	})
+}
+
+func TestPrivilegedPathSignal_ImplementsVerboseRemediator(t *testing.T) {
+	signal := NewPrivilegedPathSignal()
+
+	// Type assertion to verify the interface is implemented
+	_, ok := interface{}(signal).(VerboseRemediator)
+	if !ok {
+		t.Error("PrivilegedPathSignal should implement VerboseRemediator interface")
+	}
+}

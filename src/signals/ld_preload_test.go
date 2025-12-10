@@ -159,7 +159,8 @@ func TestLDPreloadSignal_Check_WrongOSVariable(t *testing.T) {
 	signal := NewLDPreloadSignal()
 	ctx := context.Background()
 
-	if runtime.GOOS == "linux" {
+	switch runtime.GOOS {
+	case "linux":
 		// Set macOS variable on Linux - should not trigger
 		os.Unsetenv("LD_PRELOAD")
 		os.Setenv("DYLD_INSERT_LIBRARIES", "/tmp/test.dylib")
@@ -167,7 +168,7 @@ func TestLDPreloadSignal_Check_WrongOSVariable(t *testing.T) {
 		if signal.Check(ctx) {
 			t.Error("Expected false when DYLD_INSERT_LIBRARIES is set on Linux")
 		}
-	} else if runtime.GOOS == "darwin" {
+	case "darwin":
 		// Set Linux variable on macOS - should not trigger
 		os.Setenv("LD_PRELOAD", "/tmp/test.so")
 		os.Unsetenv("DYLD_INSERT_LIBRARIES")
@@ -175,5 +176,17 @@ func TestLDPreloadSignal_Check_WrongOSVariable(t *testing.T) {
 		if signal.Check(ctx) {
 			t.Error("Expected false when LD_PRELOAD is set on macOS")
 		}
+	}
+}
+
+func TestLDPreloadSignal_Disabled(t *testing.T) {
+	os.Setenv("DASHLIGHTS_DISABLE_LD_PRELOAD", "1")
+	defer os.Unsetenv("DASHLIGHTS_DISABLE_LD_PRELOAD")
+
+	signal := NewLDPreloadSignal()
+	ctx := context.Background()
+
+	if signal.Check(ctx) {
+		t.Error("Expected false when signal is disabled via environment variable")
 	}
 }

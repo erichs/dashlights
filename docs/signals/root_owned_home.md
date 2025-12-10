@@ -223,10 +223,10 @@ git config --global --add safe.directory ~/projects/myrepo
    ```bash
    # npm
    npm config set prefix ~/.npm-global
-   
+
    # pip
    pip install --user package
-   
+
    # cargo
    # Already installs to ~/.cargo by default
    ```
@@ -235,10 +235,10 @@ git config --global --add safe.directory ~/projects/myrepo
    ```bash
    # Docker
    sudo usermod -aG docker $USER
-   
+
    # VirtualBox
    sudo usermod -aG vboxusers $USER
-   
+
    # Log out and back in for changes to take effect
    ```
 
@@ -246,7 +246,7 @@ git config --global --add safe.directory ~/projects/myrepo
    ```bash
    # Run container as your user
    docker run --user $(id -u):$(id -g) -v ~/data:/data image
-   
+
    # Or in docker-compose.yml
    user: "${UID}:${GID}"
    ```
@@ -255,7 +255,7 @@ git config --global --add safe.directory ~/projects/myrepo
    ```bash
    # Check for root-owned files weekly
    find ~ -user root -ls
-   
+
    # Add to cron
    0 0 * * 0 find ~ -user root -ls | mail -s "Root-owned files in home" you@example.com
    ```
@@ -310,3 +310,12 @@ chmod +x fix-home-ownership.sh
 ./fix-home-ownership.sh
 ```
 
+
+## Disabling This Signal
+
+To disable this signal, set the environment variable:
+```
+export DASHLIGHTS_DISABLE_ROOT_OWNED_HOME=1
+```
+
+To disable permanently, add the above line to your shell configuration file (`~/.zshrc`, `~/.bashrc`, etc.).

@@ -175,3 +175,15 @@ serde_json = "1.0"
 		t.Error("Expected false when 'path' doesn't indicate a path dependency")
 	}
 }
+
+func TestCargoPathDepsSignal_Disabled(t *testing.T) {
+	os.Setenv("DASHLIGHTS_DISABLE_CARGO_PATH_DEPS", "1")
+	defer os.Unsetenv("DASHLIGHTS_DISABLE_CARGO_PATH_DEPS")
+
+	signal := NewCargoPathDepsSignal()
+	ctx := context.Background()
+
+	if signal.Check(ctx) {
+		t.Error("Expected false when signal is disabled via environment variable")
+	}
+}

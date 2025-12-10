@@ -149,7 +149,7 @@ sudo find /home -name ".*history" -type f ! -perm 600 -exec chmod 600 {} \;
    ```bash
    # Bad
    mysql -p'MyPassword123'
-   
+
    # Good - prompt for password
    mysql -p
    # (then type password when prompted)
@@ -159,7 +159,7 @@ sudo find /home -name ".*history" -type f ! -perm 600 -exec chmod 600 {} \;
    ```bash
    # Use 1Password CLI
    op read "op://vault/item/password" | mysql -p
-   
+
    # Use environment files
    source .env  # (with proper permissions)
    mysql -p"$DB_PASSWORD"
@@ -169,7 +169,7 @@ sudo find /home -name ".*history" -type f ! -perm 600 -exec chmod 600 {} \;
    ```bash
    # Add to ~/.bashrc
    export HISTCONTROL=ignorespace
-   
+
    # Then prefix sensitive commands with a space
     mysql -p'secret'  # (note the leading space)
    ```
@@ -189,3 +189,12 @@ sudo find /home -name ".*history" -type f ! -perm 600 -exec chmod 600 {} \;
 
 6. **Use separate accounts** on shared systems instead of sharing user accounts
 
+
+## Disabling This Signal
+
+To disable this signal, set the environment variable:
+```
+export DASHLIGHTS_DISABLE_HISTORY_PERMISSIONS=1
+```
+
+To disable permanently, add the above line to your shell configuration file (`~/.zshrc`, `~/.bashrc`, etc.).

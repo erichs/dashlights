@@ -160,7 +160,7 @@ sudo apt-get remove linux-image-X.X.X-XX-generic
    ```bash
    # Check logrotate configuration
    cat /etc/logrotate.conf
-   
+
    # Add custom rotation for your app
    sudo nano /etc/logrotate.d/myapp
    ```
@@ -184,3 +184,12 @@ sudo apt-get remove linux-image-X.X.X-XX-generic
    # (requires planning and downtime)
    ```
 
+
+## Disabling This Signal
+
+To disable this signal, set the environment variable:
+```
+export DASHLIGHTS_DISABLE_DISK_SPACE=1
+```
+
+To disable permanently, add the above line to your shell configuration file (`~/.zshrc`, `~/.bashrc`, etc.).

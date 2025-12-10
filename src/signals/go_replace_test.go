@@ -177,3 +177,15 @@ func findSubstring(s, substr string) bool {
 	}
 	return false
 }
+
+func TestGoReplaceSignal_Disabled(t *testing.T) {
+	os.Setenv("DASHLIGHTS_DISABLE_GO_REPLACE", "1")
+	defer os.Unsetenv("DASHLIGHTS_DISABLE_GO_REPLACE")
+
+	signal := NewGoReplaceSignal()
+	ctx := context.Background()
+
+	if signal.Check(ctx) {
+		t.Error("Expected false when signal is disabled via environment variable")
+	}
+}

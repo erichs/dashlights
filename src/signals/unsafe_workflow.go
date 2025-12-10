@@ -91,6 +91,11 @@ func (s *UnsafeWorkflowSignal) Remediation() string {
 
 // Check scans GitHub Actions workflows for pwn request and expression injection vulnerabilities.
 func (s *UnsafeWorkflowSignal) Check(ctx context.Context) bool {
+	// Check if this signal is disabled via environment variable
+	if os.Getenv("DASHLIGHTS_DISABLE_UNSAFE_WORKFLOW") != "" {
+		return false
+	}
+
 	workflowsDir := ".github/workflows"
 
 	absWorkflowsDir, err := filepath.Abs(workflowsDir)

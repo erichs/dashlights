@@ -1548,3 +1548,15 @@ jobs:
 	_ = signal.Check(ctx)
 	// No assertion needed - just verify no panic
 }
+
+func TestUnsafeWorkflowSignal_Disabled(t *testing.T) {
+	os.Setenv("DASHLIGHTS_DISABLE_UNSAFE_WORKFLOW", "1")
+	defer os.Unsetenv("DASHLIGHTS_DISABLE_UNSAFE_WORKFLOW")
+
+	signal := NewUnsafeWorkflowSignal()
+	ctx := context.Background()
+
+	if signal.Check(ctx) {
+		t.Error("Expected false when signal is disabled via environment variable")
+	}
+}

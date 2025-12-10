@@ -129,7 +129,7 @@ Remove-Item Env:VERBOSE -ErrorAction SilentlyContinue
    ```bash
    # In development
    export NODE_ENV=development
-   
+
    # In production (never set DEBUG here)
    export NODE_ENV=production
    ```
@@ -142,3 +142,12 @@ Remove-Item Env:VERBOSE -ErrorAction SilentlyContinue
 
 5. **Use structured logging** that can be configured per environment without environment variables
 
+
+## Disabling This Signal
+
+To disable this signal, set the environment variable:
+```
+export DASHLIGHTS_DISABLE_DEBUG_ENABLED=1
+```
+
+To disable permanently, add the above line to your shell configuration file (`~/.zshrc`, `~/.bashrc`, etc.).

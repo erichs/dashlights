@@ -222,8 +222,16 @@ func displaySignalDiagnostics(w io.Writer, results []signals.Result) {
 		flexPrintf(w, "%s %s\n", sig.Emoji(), sig.Diagnostic())
 		flexPrintf(w, "   → Fix: %s\n", sig.Remediation())
 
-		// Show documentation link in verbose mode
+		// Show verbose remediation and documentation link in verbose mode
 		if args.VerboseMode {
+			// Check if the signal implements VerboseRemediator interface
+			if vr, ok := sig.(signals.VerboseRemediator); ok {
+				if verboseRem := vr.VerboseRemediation(); verboseRem != "" {
+					flexPrintln(w, "")
+					flexPrintf(w, "   🔧 %s\n", verboseRem)
+				}
+			}
+
 			filename := signalTypeToFilename(sig)
 			if filename != "" {
 				docURL := fmt.Sprintf("%s/blob/main/docs/signals/%s.md", RepositoryURL, filename)

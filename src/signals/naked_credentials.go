@@ -43,6 +43,11 @@ func (s *NakedCredentialsSignal) Remediation() string {
 func (s *NakedCredentialsSignal) Check(ctx context.Context) bool {
 	_ = ctx
 
+	// Check if this signal is disabled via environment variable
+	if os.Getenv("DASHLIGHTS_DISABLE_NAKED_CREDENTIALS") != "" {
+		return false
+	}
+
 	s.foundVars = []string{}
 
 	// Patterns that indicate secrets

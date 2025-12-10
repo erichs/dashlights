@@ -43,6 +43,11 @@ func (s *ProdPanicSignal) Remediation() string {
 
 // Check inspects AWS and Kubernetes configuration for production indicators.
 func (s *ProdPanicSignal) Check(ctx context.Context) bool {
+	// Check if this signal is disabled via environment variable
+	if os.Getenv("DASHLIGHTS_DISABLE_PROD_PANIC") != "" {
+		return false
+	}
+
 	// Check AWS_PROFILE
 	awsProfile := os.Getenv("AWS_PROFILE")
 	if isProdIndicator(awsProfile) {

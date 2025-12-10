@@ -439,3 +439,15 @@ func TestSSHAgentBloatSignal_SetDeadlineError(t *testing.T) {
 		t.Error("Expected false when agent has 3 keys and SetDeadline succeeds")
 	}
 }
+
+func TestSSHAgentBloatSignal_Disabled(t *testing.T) {
+	os.Setenv("DASHLIGHTS_DISABLE_SSH_AGENT_BLOAT", "1")
+	defer os.Unsetenv("DASHLIGHTS_DISABLE_SSH_AGENT_BLOAT")
+
+	signal := NewSSHAgentBloatSignal()
+	ctx := context.Background()
+
+	if signal.Check(ctx) {
+		t.Error("Expected false when signal is disabled via environment variable")
+	}
+}

@@ -496,3 +496,15 @@ func TestZombieProcessesSignal_Check_WithMock_ReadDirError(t *testing.T) {
 		t.Error("Expected false when /proc ReadDir fails")
 	}
 }
+
+func TestZombieProcessesSignal_Disabled(t *testing.T) {
+	os.Setenv("DASHLIGHTS_DISABLE_ZOMBIE_PROCESSES", "1")
+	defer os.Unsetenv("DASHLIGHTS_DISABLE_ZOMBIE_PROCESSES")
+
+	signal := NewZombieProcessesSignal()
+	ctx := context.Background()
+
+	if signal.Check(ctx) {
+		t.Error("Expected false when signal is disabled via environment variable")
+	}
+}

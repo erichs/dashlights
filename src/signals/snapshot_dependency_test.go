@@ -549,3 +549,15 @@ func TestSnapshotDependencySignal_DirectoryTraversalInTag(t *testing.T) {
 	// Result depends on whether we're on the tag, but should not crash
 	_ = result
 }
+
+func TestSnapshotDependencySignal_Disabled(t *testing.T) {
+	os.Setenv("DASHLIGHTS_DISABLE_SNAPSHOT_DEPENDENCY", "1")
+	defer os.Unsetenv("DASHLIGHTS_DISABLE_SNAPSHOT_DEPENDENCY")
+
+	signal := NewSnapshotDependencySignal()
+	ctx := context.Background()
+
+	if signal.Check(ctx) {
+		t.Error("Expected false when signal is disabled via environment variable")
+	}
+}

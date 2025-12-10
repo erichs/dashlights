@@ -164,7 +164,7 @@ request-prod-access --duration 1h --reason "Investigating incident #1234"
    # Test in staging
    export ENV=staging
    ./deploy.sh
-   
+
    # Verify it works
    # Then deploy to production
    export ENV=production
@@ -175,7 +175,7 @@ request-prod-access --duration 1h --reason "Investigating incident #1234"
    ```bash
    # Request read-only production access
    export PROD_MODE=readonly
-   
+
    # Request write access only when needed
    export PROD_MODE=readwrite
    ```
@@ -254,3 +254,12 @@ psql -h prod-db.example.com
 5. **Document what happened** for post-mortem
 6. **Learn from it** - update procedures to prevent recurrence
 
+
+## Disabling This Signal
+
+To disable this signal, set the environment variable:
+```
+export DASHLIGHTS_DISABLE_PROD_PANIC=1
+```
+
+To disable permanently, add the above line to your shell configuration file (`~/.zshrc`, `~/.bashrc`, etc.).
