@@ -43,7 +43,7 @@ $ dashlights --details
 
 ### Security Checks
 
-Dashlights performs **35 concurrent security checks** across five categories: Identity & Access Management, Operational Security, Repository Hygiene, System Health, and Infrastructure Security.
+Dashlights performs **37 concurrent security checks** across five categories: Identity & Access Management, Operational Security, Repository Hygiene, System Health, and Infrastructure Security.
 
 👉 **[View the complete list of security signals →](SIGNALS.md)**
 
