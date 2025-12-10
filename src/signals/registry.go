@@ -55,5 +55,8 @@ func GetAllSignals() []Signal {
 		NewRootKubeContextSignal(),     // File read (.kube/config)
 		NewDangerousTFVarSignal(),      // Env var check
 
+		// Data sprawl signals
+		NewDumpsterFireSignal(),   // Directory scan for sensitive files
+		NewRottingSecretsSignal(), // Old sensitive files detection
 	}
 }
