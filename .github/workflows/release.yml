@@ -66,3 +66,166 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  # Build, sign, and notarize macOS binaries separately
+  darwin-release:
+    needs: [check-release, goreleaser]
+    if: needs.check-release.outputs.is_release == 'true'
+    runs-on: macos-latest
+    env:
+      VERSION: ${{ needs.check-release.outputs.tag_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.check-release.outputs.tag_name }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Generate repository URL
+        run: cd src && go generate
+
+      - name: Import Code Signing Certificate
+        env:
+          APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          # Create a temporary keychain
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
+
+          # Decode certificate
+          echo "$APPLE_CERTIFICATE_BASE64" | base64 --decode > $RUNNER_TEMP/certificate.p12
+
+          # Create and configure keychain
+          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+          # Import certificate
+          security import $RUNNER_TEMP/certificate.p12 -P "$APPLE_CERTIFICATE_PASSWORD" \
+            -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security list-keychain -d user -s $KEYCHAIN_PATH
+
+          # Clean up certificate file
+          rm $RUNNER_TEMP/certificate.p12
+
+      - name: Setup Notarization Credentials
+        env:
+          APPLE_NOTARIZATION_KEY_BASE64: ${{ secrets.APPLE_NOTARIZATION_KEY_BASE64 }}
+        run: |
+          mkdir -p ~/private_keys
+          echo "$APPLE_NOTARIZATION_KEY_BASE64" | base64 --decode > ~/private_keys/AuthKey_${{ secrets.APPLE_NOTARIZATION_KEY_ID }}.p8
+
+      - name: Build Darwin Binaries
+        run: |
+          VERSION_NUM=${VERSION#v}
+          COMMIT=$(git rev-parse --short HEAD)
+          DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          LDFLAGS="-s -w -X main.version=${VERSION_NUM} -X main.commit=${COMMIT} -X main.date=${DATE}"
+
+          # Build for darwin/amd64
+          echo "Building darwin/amd64..."
+          CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags "$LDFLAGS" -o dist/dashlights_darwin_amd64/dashlights ./src
+
+          # Build for darwin/arm64
+          echo "Building darwin/arm64..."
+          CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags "$LDFLAGS" -o dist/dashlights_darwin_arm64/dashlights ./src
+
+      - name: Sign Darwin Binaries
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          # Sign amd64 binary
+          codesign --force --options runtime \
+            --sign "Developer ID Application: Erich Smith ($APPLE_TEAM_ID)" \
+            --timestamp \
+            dist/dashlights_darwin_amd64/dashlights
+
+          # Sign arm64 binary
+          codesign --force --options runtime \
+            --sign "Developer ID Application: Erich Smith ($APPLE_TEAM_ID)" \
+            --timestamp \
+            dist/dashlights_darwin_arm64/dashlights
+
+          # Verify signatures
+          codesign -vv dist/dashlights_darwin_amd64/dashlights
+          codesign -vv dist/dashlights_darwin_arm64/dashlights
+
+      - name: Create Archives
+        run: |
+          VERSION_NUM=${VERSION#v}
+
+          # Create zip archives matching goreleaser naming convention
+          cd dist/dashlights_darwin_amd64
+          cp ../../LICENSE ../../README.md .
+          zip -r ../dashlights_${VERSION_NUM}_Darwin_x86_64.zip dashlights LICENSE README.md
+          cd ..
+
+          cd dashlights_darwin_arm64
+          cp ../../LICENSE ../../README.md .
+          zip -r ../dashlights_${VERSION_NUM}_Darwin_arm64.zip dashlights LICENSE README.md
+          cd ..
+
+      - name: Notarize Archives
+        env:
+          APPLE_NOTARIZATION_KEY_ID: ${{ secrets.APPLE_NOTARIZATION_KEY_ID }}
+          APPLE_NOTARIZATION_ISSUER_ID: ${{ secrets.APPLE_NOTARIZATION_ISSUER_ID }}
+        run: |
+          VERSION_NUM=${VERSION#v}
+
+          for ARCH in x86_64 arm64; do
+            ARCHIVE="dist/dashlights_${VERSION_NUM}_Darwin_${ARCH}.zip"
+            echo "Submitting $ARCHIVE for notarization..."
+
+            xcrun notarytool submit "$ARCHIVE" \
+              --key ~/private_keys/AuthKey_${APPLE_NOTARIZATION_KEY_ID}.p8 \
+              --key-id "$APPLE_NOTARIZATION_KEY_ID" \
+              --issuer "$APPLE_NOTARIZATION_ISSUER_ID" \
+              --wait \
+              --timeout 30m
+
+            echo "Notarization complete for $ARCHIVE"
+          done
+
+      - name: Generate Checksums
+        run: |
+          VERSION_NUM=${VERSION#v}
+          cd dist
+          shasum -a 256 dashlights_${VERSION_NUM}_Darwin_*.zip > darwin_checksums.txt
+          cat darwin_checksums.txt
+
+      - name: Upload Darwin Assets to Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION_NUM=${VERSION#v}
+
+          # Upload archives
+          gh release upload "$VERSION" \
+            dist/dashlights_${VERSION_NUM}_Darwin_x86_64.zip \
+            dist/dashlights_${VERSION_NUM}_Darwin_arm64.zip \
+            --clobber
+
+          # Append Darwin checksums to existing checksums.txt
+          gh release download "$VERSION" -p checksums.txt -O dist/checksums_original.txt || true
+          if [ -f dist/checksums_original.txt ]; then
+            cat dist/darwin_checksums.txt >> dist/checksums_original.txt
+            gh release upload "$VERSION" dist/checksums_original.txt --clobber
+            mv dist/checksums_original.txt dist/checksums.txt
+          else
+            gh release upload "$VERSION" dist/darwin_checksums.txt --clobber
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: |
+          # Remove keychain
+          security delete-keychain $RUNNER_TEMP/app-signing.keychain-db || true
+          # Remove notarization key
+          rm -rf ~/private_keys
+

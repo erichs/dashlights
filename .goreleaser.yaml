@@ -14,9 +14,9 @@ builds:
   - main: ./src
     env:
       - CGO_ENABLED=0
+    # Darwin builds are handled separately in release.yml for code signing/notarization
     goos:
       - linux
-      - darwin
     goarch:
       - amd64
       - arm64
@@ -24,10 +24,6 @@ builds:
     goarm:
       - "6"
       - "7"
-    # Exclude combinations that don't make sense
-    ignore:
-      - goos: darwin
-        goarch: arm
     ldflags:
       - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}}
     binary: dashlights
