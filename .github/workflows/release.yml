@@ -120,6 +120,7 @@ jobs:
         run: |
           mkdir -p ~/private_keys
           echo "$APPLE_NOTARIZATION_KEY_BASE64" | base64 --decode > ~/private_keys/AuthKey_${{ secrets.APPLE_NOTARIZATION_KEY_ID }}.p8
+          chmod 600 ~/private_keys/AuthKey_${{ secrets.APPLE_NOTARIZATION_KEY_ID }}.p8
 
       - name: Build Darwin Binaries
         run: |
@@ -127,6 +128,9 @@ jobs:
           COMMIT=$(git rev-parse --short HEAD)
           DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           LDFLAGS="-s -w -X main.version=${VERSION_NUM} -X main.commit=${COMMIT} -X main.date=${DATE}"
+
+          # Create output directories
+          mkdir -p dist/dashlights_darwin_amd64 dist/dashlights_darwin_arm64
 
           # Build for darwin/amd64
           echo "Building darwin/amd64..."
@@ -140,15 +144,24 @@ jobs:
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
+          # Verify the signing identity exists
+          IDENTITY="Developer ID Application: Erich Smith ($APPLE_TEAM_ID)"
+          if ! security find-identity -v -p codesigning | grep -q "$IDENTITY"; then
+            echo "Error: Signing identity '$IDENTITY' not found in keychain"
+            security find-identity -v -p codesigning
+            exit 1
+          fi
+          echo "Found signing identity: $IDENTITY"
+
           # Sign amd64 binary
           codesign --force --options runtime \
-            --sign "Developer ID Application: Erich Smith ($APPLE_TEAM_ID)" \
+            --sign "$IDENTITY" \
             --timestamp \
             dist/dashlights_darwin_amd64/dashlights
 
           # Sign arm64 binary
           codesign --force --options runtime \
-            --sign "Developer ID Application: Erich Smith ($APPLE_TEAM_ID)" \
+            --sign "$IDENTITY" \
             --timestamp \
             dist/dashlights_darwin_arm64/dashlights
 
@@ -212,14 +225,13 @@ jobs:
             --clobber
 
           # Append Darwin checksums to existing checksums.txt
-          gh release download "$VERSION" -p checksums.txt -O dist/checksums_original.txt || true
-          if [ -f dist/checksums_original.txt ]; then
-            cat dist/darwin_checksums.txt >> dist/checksums_original.txt
-            gh release upload "$VERSION" dist/checksums_original.txt --clobber
-            mv dist/checksums_original.txt dist/checksums.txt
+          gh release download "$VERSION" -p checksums.txt -O dist/checksums.txt || true
+          if [ -f dist/checksums.txt ]; then
+            cat dist/darwin_checksums.txt >> dist/checksums.txt
           else
-            gh release upload "$VERSION" dist/darwin_checksums.txt --clobber
+            cp dist/darwin_checksums.txt dist/checksums.txt
           fi
+          gh release upload "$VERSION" dist/checksums.txt --clobber
 
       - name: Cleanup
         if: always()
