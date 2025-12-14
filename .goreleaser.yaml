@@ -67,7 +67,7 @@ release:
   github:
     owner: erichs
     name: dashlights
-  draft: false
+  draft: true
   prerelease: auto
   name_template: "{{.ProjectName}} v{{.Version}}"
 
