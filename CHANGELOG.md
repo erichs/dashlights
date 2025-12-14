@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Apple code signing and notarization to the release process for macOS
+  This requires a one-time online validation with Apple's notary servers
 
 ### Fixed
 - Minor issues with the macOS release process
