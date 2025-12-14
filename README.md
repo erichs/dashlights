@@ -57,15 +57,13 @@ Dashlights performs **37 concurrent security checks** across five categories: Id
 
 ## How to Install
 
-NOTE: 1.0.0-alpha is available, check out the [releases](https://github.com/erichs/dashlights/releases) page for details.
-
 ### Using eget (recommended)
 
 [eget](https://github.com/zyedidia/eget) makes it easy to install pre-built binaries from GitHub releases:
 
 ```shell
 # Install dashlights
-eget erichs/dashlights --pre-release
+eget erichs/dashlights 
 ```
 
 ### Manual download from releases
