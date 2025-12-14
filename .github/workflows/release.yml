@@ -241,3 +241,17 @@ jobs:
           # Remove notarization key
           rm -rf ~/private_keys
 
+  # Publish the draft release after all assets are uploaded
+  publish-release:
+    needs: [check-release, darwin-release]
+    if: needs.check-release.outputs.is_release == 'true'
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.check-release.outputs.tag_name }}
+    steps:
+      - name: Publish Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release edit "$VERSION" --draft=false --repo ${{ github.repository }}
+
