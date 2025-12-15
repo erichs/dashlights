@@ -9,8 +9,12 @@
 
 > A fast, security-focused "check engine light" for your prompt!
 
+[![CI](https://github.com/erichs/dashlights/actions/workflows/ci.yml/badge.svg)](https://github.com/erichs/dashlights/actions/workflows/ci.yml)
+[![Security](https://github.com/erichs/dashlights/actions/workflows/security.yml/badge.svg)](https://github.com/erichs/dashlights/actions/workflows/security.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/erichs/dashlights)](https://goreportcard.com/report/github.com/erichs/dashlights)
 [![codecov](https://codecov.io/github/erichs/dashlights/graph/badge.svg?token=V8KLQJF6QV)](https://codecov.io/github/erichs/dashlights)
+[![Release](https://img.shields.io/github/v/release/erichs/dashlights)](https://github.com/erichs/dashlights/releases/latest)
+[![License](https://img.shields.io/github/license/erichs/dashlights)](https://github.com/erichs/dashlights/blob/main/LICENSE)
 [![openssf](https://www.bestpractices.dev/projects/11518/badge)](https://www.bestpractices.dev/projects/11518)
 
 </td>
