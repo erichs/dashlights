@@ -196,9 +196,9 @@ func TestDiagModeDisplay(t *testing.T) {
 	// Pass empty results for this test
 	display(&b, &lights, []signals.Result{})
 
-	// In diagnostic mode with no security signals, should show "No security issues"
-	if !strings.Contains(b.String(), "No security issues") {
-		t.Errorf("Expected to see 'No security issues' in:\n%s", b.String())
+	// In diagnostic mode with custom lights, should show the custom light
+	if !strings.Contains(b.String(), "DM - bar diagnostic") {
+		t.Errorf("Expected to see custom light 'DM - bar diagnostic' in:\n%s", b.String())
 	}
 }
 
@@ -334,8 +334,9 @@ func TestSignalTypeToFilename(t *testing.T) {
 func TestDisplaySignalDiagnosticsNoIssues(t *testing.T) {
 	var b bytes.Buffer
 	results := []signals.Result{}
+	emptyLights := []dashlight{}
 
-	displaySignalDiagnostics(&b, results)
+	displaySignalDiagnostics(&b, results, &emptyLights)
 
 	expected := "✅ No security issues detected"
 	if !strings.Contains(b.String(), expected) {
@@ -345,6 +346,7 @@ func TestDisplaySignalDiagnosticsNoIssues(t *testing.T) {
 
 func TestDisplaySignalDiagnosticsWithIssues(t *testing.T) {
 	var b bytes.Buffer
+	emptyLights := []dashlight{}
 
 	// Create a mock signal result
 	sig := signals.NewDockerSocketSignal()
@@ -354,7 +356,7 @@ func TestDisplaySignalDiagnosticsWithIssues(t *testing.T) {
 
 	// Test non-verbose mode
 	args.VerboseMode = false
-	displaySignalDiagnostics(&b, results)
+	displaySignalDiagnostics(&b, results, &emptyLights)
 
 	// Should contain the diagnostic message
 	if !strings.Contains(b.String(), "Security Issues Detected:") {
@@ -374,6 +376,7 @@ func TestDisplaySignalDiagnosticsWithIssues(t *testing.T) {
 
 func TestDisplaySignalDiagnosticsVerboseMode(t *testing.T) {
 	var b bytes.Buffer
+	emptyLights := []dashlight{}
 
 	// Create a mock signal result
 	sig := signals.NewDockerSocketSignal()
@@ -385,7 +388,7 @@ func TestDisplaySignalDiagnosticsVerboseMode(t *testing.T) {
 	args.VerboseMode = true
 	defer func() { args.VerboseMode = false }()
 
-	displaySignalDiagnostics(&b, results)
+	displaySignalDiagnostics(&b, results, &emptyLights)
 
 	// Should contain the diagnostic message
 	if !strings.Contains(b.String(), "Security Issues Detected:") {
