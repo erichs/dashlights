@@ -34,11 +34,17 @@ type dashlight struct {
 	UnsetString string
 }
 
+type debugResult struct {
+	Result   signals.Result
+	Duration time.Duration
+}
+
 type cliArgs struct {
 	DetailsMode     bool `arg:"-d,--details,help:Show detailed diagnostic information for detected issues."`
 	VerboseMode     bool `arg:"-v,--verbose,help:Verbose mode: show documentation links in diagnostic output."`
 	ListCustomMode  bool `arg:"-l,--list-custom,help:List supported color attributes and emoji aliases for custom lights."`
 	ClearCustomMode bool `arg:"-c,--clear-custom,help:Shell code to clear custom DASHLIGHT_ environment variables."`
+	DebugMode       bool `arg:"--debug,help:Debug mode: disable timeouts and show detailed execution timing."`
 }
 
 // Version returns the version string for --version flag
@@ -64,18 +70,34 @@ func displayClearCodes(w io.Writer, lights *[]dashlight) {
 }
 
 func main() {
-	// start watchdog timer for 10.1ms, this will exit the program and 'fail open'
-	// if any security signals are not respecting context cancellation for any reason
-	watchdog := time.AfterFunc(time.Duration(10.1*float64(time.Millisecond)), func() {
-		// fmt.Println("Timeout!") TODO: add debug logging if this occurs
-		os.Exit(0)
-	})
-	defer watchdog.Stop() // Cancel watchdog on normal completion
-
 	arg.MustParse(&args)
 
-	// Run security signal checks with a tight timeout for performance
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	startTime := time.Now()
+	var envParseStart, envParseEnd time.Time
+	var signalsStart, signalsEnd time.Time
+
+	// Conditional watchdog timer based on debug mode
+	if !args.DebugMode {
+		// start watchdog timer for 10.1ms, this will exit the program and 'fail open'
+		// if any security signals are not respecting context cancellation for any reason
+		watchdog := time.AfterFunc(time.Duration(10.1*float64(time.Millisecond)), func() {
+			// fmt.Println("Timeout!") TODO: add debug logging if this occurs
+			os.Exit(0)
+		})
+		defer watchdog.Stop() // Cancel watchdog on normal completion
+	} else {
+		flexPrintln(os.Stderr, "🐛 Debug mode: watchdog timer disabled")
+	}
+
+	// Run security signal checks with a timeout (extended in debug mode)
+	var ctx context.Context
+	var cancel context.CancelFunc
+	if args.DebugMode {
+		ctx, cancel = context.WithTimeout(context.Background(), 30*time.Second)
+		flexPrintf(os.Stderr, "🐛 Debug mode: timeout set to 30 seconds\n\n")
+	} else {
+		ctx, cancel = context.WithTimeout(context.Background(), 10*time.Millisecond)
+	}
 	defer cancel()
 
 	var (
@@ -88,6 +110,10 @@ func main() {
 	// Parse DASHLIGHT_ environment variables
 	go func() {
 		defer wg.Done()
+		if args.DebugMode {
+			envParseStart = time.Now()
+			defer func() { envParseEnd = time.Now() }()
+		}
 		envRaw = os.Environ()
 		// we pass a local slice to avoid locking: we'll assign to global
 		// 'lights' after parsing
@@ -97,14 +123,28 @@ func main() {
 	}()
 
 	// Security signal checks
+	var debugResults []debugResult
 	go func() {
 		defer wg.Done()
+		if args.DebugMode {
+			signalsStart = time.Now()
+			defer func() { signalsEnd = time.Now() }()
+		}
 		allSignals := signals.GetAllSignals()
-		results = signals.CheckAll(ctx, allSignals)
+		if args.DebugMode {
+			results, debugResults = checkAllWithTiming(ctx, allSignals)
+		} else {
+			results = signals.CheckAll(ctx, allSignals)
+		}
 	}()
 
 	wg.Wait() // Wait for both goroutines to complete,
 	// if we timed out, the watchdog will exit here
+
+	if args.DebugMode {
+		totalDuration := time.Since(startTime)
+		displayDebugInfo(os.Stderr, envParseStart, envParseEnd, signalsStart, signalsEnd, totalDuration, &lights, results, debugResults)
+	}
 
 	display(os.Stdout, &lights, results)
 }
@@ -309,4 +349,126 @@ func utf8HexToString(hex string) (string, error) {
 		return "", err
 	}
 	return string(rune(i)), nil
+}
+
+// checkAllWithTiming runs all signal checks concurrently and tracks timing for each
+func checkAllWithTiming(ctx context.Context, sigs []signals.Signal) ([]signals.Result, []debugResult) {
+	results := make([]signals.Result, len(sigs))
+	debugResults := make([]debugResult, len(sigs))
+	var wg sync.WaitGroup
+
+	for i, sig := range sigs {
+		wg.Add(1)
+		go func(idx int, s signals.Signal) {
+			defer wg.Done()
+			start := time.Now()
+
+			// Use a panic recovery to ensure one bad signal doesn't crash everything
+			defer func() {
+				if r := recover(); r != nil {
+					duration := time.Since(start)
+					results[idx] = signals.Result{
+						Signal:   s,
+						Detected: false,
+						Error:    nil,
+					}
+					debugResults[idx] = debugResult{
+						Result:   results[idx],
+						Duration: duration,
+					}
+				}
+			}()
+
+			detected := s.Check(ctx)
+			duration := time.Since(start)
+
+			results[idx] = signals.Result{
+				Signal:   s,
+				Detected: detected,
+				Error:    nil,
+			}
+			debugResults[idx] = debugResult{
+				Result:   results[idx],
+				Duration: duration,
+			}
+		}(i, sig)
+	}
+
+	wg.Wait()
+	return results, debugResults
+}
+
+// displayDebugInfo outputs detailed debug information to stderr
+func displayDebugInfo(w io.Writer, envStart, envEnd, sigStart, sigEnd time.Time, total time.Duration, lights *[]dashlight, results []signals.Result, debugResults []debugResult) {
+	flexPrintln(w, "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	flexPrintln(w, "🐛 DEBUG INFORMATION")
+	flexPrintln(w, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
+
+	// Goroutine timing
+	envDuration := envEnd.Sub(envStart)
+	sigDuration := sigEnd.Sub(sigStart)
+
+	flexPrintln(w, "⏱️  GOROUTINE TIMING:")
+	flexPrintf(w, "   Environment parsing: %v\n", envDuration)
+	flexPrintf(w, "   Signal checks:       %v\n", sigDuration)
+	flexPrintf(w, "   Total execution:     %v\n\n", total)
+
+	// Environment parsing results
+	flexPrintln(w, "📦 ENVIRONMENT PARSING:")
+	if len(*lights) == 0 {
+		flexPrintln(w, "   No DASHLIGHT_ variables found\n")
+	} else {
+		flexPrintf(w, "   Found %d custom dashlight(s):\n", len(*lights))
+		for _, light := range *lights {
+			flexPrintf(w, "      %s %s - %s\n", light.Glyph, light.Name, light.Diagnostic)
+		}
+		flexPrintln(w, "")
+	}
+
+	// Signal check results
+	detectedCount := signals.CountDetected(results)
+	flexPrintf(w, "🔍 SIGNAL CHECK RESULTS (%d detected, %d total):\n\n", detectedCount, len(results))
+
+	// Sort debug results by duration (slowest first)
+	sortedDebug := make([]debugResult, len(debugResults))
+	copy(sortedDebug, debugResults)
+	// Simple bubble sort for top performers
+	for i := 0; i < len(sortedDebug); i++ {
+		for j := i + 1; j < len(sortedDebug); j++ {
+			if sortedDebug[j].Duration > sortedDebug[i].Duration {
+				sortedDebug[i], sortedDebug[j] = sortedDebug[j], sortedDebug[i]
+			}
+		}
+	}
+
+	// Show all signals with timing
+	for _, dr := range sortedDebug {
+		status := "  "
+		if dr.Result.Detected {
+			status = "🚨"
+		}
+		flexPrintf(w, "   %s %-35s %8v\n", status, dr.Result.Signal.Name(), dr.Duration)
+	}
+
+	// Performance summary
+	flexPrintln(w, "\n📊 PERFORMANCE SUMMARY:")
+	if len(sortedDebug) >= 3 {
+		flexPrintln(w, "   Top 3 slowest checks:")
+		for i := 0; i < 3 && i < len(sortedDebug); i++ {
+			flexPrintf(w, "      %d. %-35s %v\n", i+1, sortedDebug[i].Result.Signal.Name(), sortedDebug[i].Duration)
+		}
+	}
+
+	// Check if any signals exceeded thresholds
+	slow := 0
+	for _, dr := range debugResults {
+		if dr.Duration > 5*time.Millisecond {
+			slow++
+		}
+	}
+	if slow > 0 {
+		flexPrintf(w, "\n   ⚠️  %d signal(s) exceeded 5ms threshold\n", slow)
+	}
+
+	flexPrintln(w, "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
 }
