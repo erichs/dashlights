@@ -439,6 +439,10 @@ func checkAllWithTiming(ctx context.Context, sigs []signals.Signal) ([]signals.R
 					debugResults[i] = debugResult{Result: results[i], Duration: 0}
 				}
 			}
+			// Note: Goroutines that haven't completed will finish and send to the
+			// buffered channel (non-blocking). Since this is a CLI that exits
+			// immediately after displaying results, os.Exit() cleans up any
+			// remaining goroutines - no explicit cancellation needed.
 			return results, debugResults, false // Partial results
 		}
 	}
@@ -452,11 +456,11 @@ func displayDebugInfo(w io.Writer, envStart, envEnd, sigStart, sigEnd time.Time,
 	flexPrintln(w, "🐛 DEBUG INFORMATION")
 	flexPrintln(w, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
 
-	// Goroutine timing
+	// Phase timing
 	envDuration := envEnd.Sub(envStart)
 	sigDuration := sigEnd.Sub(sigStart)
 
-	flexPrintln(w, "⏱️  GOROUTINE TIMING:")
+	flexPrintln(w, "⏱️  PHASE TIMING:")
 	flexPrintf(w, "   Environment parsing: %v\n", envDuration)
 	flexPrintf(w, "   Signal checks:       %v\n", sigDuration)
 	flexPrintf(w, "   Total execution:     %v\n\n", total)

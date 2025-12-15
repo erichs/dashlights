@@ -612,8 +612,8 @@ func TestDisplayDebugInfoNoLights(t *testing.T) {
 	if !strings.Contains(output, "DEBUG INFORMATION") {
 		t.Errorf("Expected DEBUG INFORMATION header in:\n%s", output)
 	}
-	if !strings.Contains(output, "GOROUTINE TIMING") {
-		t.Errorf("Expected GOROUTINE TIMING section in:\n%s", output)
+	if !strings.Contains(output, "PHASE TIMING") {
+		t.Errorf("Expected PHASE TIMING section in:\n%s", output)
 	}
 	if !strings.Contains(output, "No DASHLIGHT_ variables found") {
 		t.Errorf("Expected 'No DASHLIGHT_ variables found' in:\n%s", output)

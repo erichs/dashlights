@@ -73,8 +73,26 @@ print_summary() {
         local sum=0
 
         for time in "${EXECUTION_TIMES[@]}"; do
-            # Convert to microseconds for comparison
-            local time_us=$(echo "$time" | sed 's/ms//' | awk '{print $1 * 1000}')
+            # Parse time and convert to microseconds for comparison
+            # Go's time.Duration can output µs, ms, or s depending on magnitude
+            local time_value=$(echo "$time" | grep -Eo '^[0-9.]+')
+            local time_unit=$(echo "$time" | grep -Eo '[µa-zA-Z]+$')
+            local time_us
+            case "$time_unit" in
+                ms)
+                    time_us=$(awk "BEGIN {print $time_value * 1000}")
+                    ;;
+                µs|us)
+                    time_us="$time_value"
+                    ;;
+                s)
+                    time_us=$(awk "BEGIN {print $time_value * 1000000}")
+                    ;;
+                *)
+                    # Assume milliseconds if unknown
+                    time_us=$(awk "BEGIN {print $time_value * 1000}")
+                    ;;
+            esac
 
             if [ "${time_us%.*}" -lt "${min_time%.*}" ]; then
                 min_time=$time_us
@@ -147,8 +165,25 @@ for i in $(seq 1 "$SAMPLES"); do
         SUCCESSFUL_RUNS=$((SUCCESSFUL_RUNS + 1))
 
         # Check if this would have timed out in production (>10ms)
-        # Convert time to milliseconds for comparison
-        exec_time_ms=$(echo "$exec_time" | sed 's/ms//' | awk '{printf "%.2f", $1}')
+        # Parse execution time and convert to milliseconds
+        # Go's time.Duration can output µs, ms, or s depending on magnitude
+        exec_time_value=$(echo "$exec_time" | grep -Eo '^[0-9.]+')
+        exec_time_unit=$(echo "$exec_time" | grep -Eo '[µa-zA-Z]+$')
+        case "$exec_time_unit" in
+            ms)
+                exec_time_ms="$exec_time_value"
+                ;;
+            µs|us)
+                exec_time_ms=$(awk "BEGIN {printf \"%.4f\", $exec_time_value / 1000}")
+                ;;
+            s)
+                exec_time_ms=$(awk "BEGIN {printf \"%.4f\", $exec_time_value * 1000}")
+                ;;
+            *)
+                echo -e "${YELLOW}Warning:${NC} Unknown time unit '$exec_time_unit'. Assuming ms."
+                exec_time_ms="$exec_time_value"
+                ;;
+        esac
         would_timeout=$(awk "BEGIN {print ($exec_time_ms > $TIMEOUT_THRESHOLD_MS) ? 1 : 0}")
 
         if [ "$would_timeout" -eq 1 ]; then

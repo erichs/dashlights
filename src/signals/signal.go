@@ -122,6 +122,10 @@ func CheckAll(ctx context.Context, signals []Signal) ([]Result, bool) {
 					results[i] = Result{Signal: sig, Detected: false, Error: nil}
 				}
 			}
+			// Note: Goroutines that haven't completed will finish and send to the
+			// buffered channel (non-blocking). Since this is a CLI that exits
+			// immediately after displaying results, os.Exit() cleans up any
+			// remaining goroutines - no explicit cancellation needed.
 			return results, false // Partial results
 		}
 	}
