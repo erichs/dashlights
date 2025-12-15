@@ -23,7 +23,7 @@
 
 Dashlights continuously scans for routine security and developer hygiene trouble signals, just like a 'check engine light' for your development environment.
 
-- **Fast enough to put in your prompt!** Guaranteed to return in less than 10ms (16ms is the threshold of perceptibility). Average clock time on a 2024 M3 MacBook Air is ~3ms.
+- **Fast enough to put in your prompt!** Guaranteed to return in less than 11ms (16ms is the threshold of perceptibility). Average clock time on a 2024 M3 MacBook Air is ~3ms.
 - **Concurrent security checks** - Runs 30+ security checks in parallel using goroutines
 - **Non-intrusive alerts** - Shows a simple count in your prompt, detailed diagnostics on demand
 
@@ -98,17 +98,6 @@ make build
 # Or install to $GOPATH/bin
 make install
 ```
-
-### Authorizing on macOS
-
-macOS users may need to authorize the binary after the first run:
-
-```shell
-# Authorize the binary (only needed once)
-xattr -d com.apple.quarantine dashlights
-```
-
-NOTE: code signing and notarization are being worked on!
 
 ## Configure your PROMPT
 
