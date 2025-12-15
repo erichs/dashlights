@@ -4,6 +4,7 @@ coverage.out
 coverage.txt
 coverage_*
 coverage.html
+CLAUDE.md
 
 # Generated files
 src/repo_url.go
