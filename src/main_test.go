@@ -2,9 +2,11 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/erichs/dashlights/src/signals"
 	"github.com/fatih/color"
@@ -196,9 +198,9 @@ func TestDiagModeDisplay(t *testing.T) {
 	// Pass empty results for this test
 	display(&b, &lights, []signals.Result{})
 
-	// In diagnostic mode with no security signals, should show "No security issues"
-	if !strings.Contains(b.String(), "No security issues") {
-		t.Errorf("Expected to see 'No security issues' in:\n%s", b.String())
+	// In diagnostic mode with custom lights, should show the custom light
+	if !strings.Contains(b.String(), "DM - bar diagnostic") {
+		t.Errorf("Expected to see custom light 'DM - bar diagnostic' in:\n%s", b.String())
 	}
 }
 
@@ -334,8 +336,9 @@ func TestSignalTypeToFilename(t *testing.T) {
 func TestDisplaySignalDiagnosticsNoIssues(t *testing.T) {
 	var b bytes.Buffer
 	results := []signals.Result{}
+	emptyLights := []dashlight{}
 
-	displaySignalDiagnostics(&b, results)
+	displaySignalDiagnostics(&b, results, &emptyLights)
 
 	expected := "✅ No security issues detected"
 	if !strings.Contains(b.String(), expected) {
@@ -345,6 +348,7 @@ func TestDisplaySignalDiagnosticsNoIssues(t *testing.T) {
 
 func TestDisplaySignalDiagnosticsWithIssues(t *testing.T) {
 	var b bytes.Buffer
+	emptyLights := []dashlight{}
 
 	// Create a mock signal result
 	sig := signals.NewDockerSocketSignal()
@@ -354,7 +358,7 @@ func TestDisplaySignalDiagnosticsWithIssues(t *testing.T) {
 
 	// Test non-verbose mode
 	args.VerboseMode = false
-	displaySignalDiagnostics(&b, results)
+	displaySignalDiagnostics(&b, results, &emptyLights)
 
 	// Should contain the diagnostic message
 	if !strings.Contains(b.String(), "Security Issues Detected:") {
@@ -374,6 +378,7 @@ func TestDisplaySignalDiagnosticsWithIssues(t *testing.T) {
 
 func TestDisplaySignalDiagnosticsVerboseMode(t *testing.T) {
 	var b bytes.Buffer
+	emptyLights := []dashlight{}
 
 	// Create a mock signal result
 	sig := signals.NewDockerSocketSignal()
@@ -385,7 +390,7 @@ func TestDisplaySignalDiagnosticsVerboseMode(t *testing.T) {
 	args.VerboseMode = true
 	defer func() { args.VerboseMode = false }()
 
-	displaySignalDiagnostics(&b, results)
+	displaySignalDiagnostics(&b, results, &emptyLights)
 
 	// Should contain the diagnostic message
 	if !strings.Contains(b.String(), "Security Issues Detected:") {
@@ -474,5 +479,291 @@ func TestDisplaySecurityStatusOnlyLights(t *testing.T) {
 	}
 	if !strings.Contains(b.String(), "!") {
 		t.Errorf("Expected to see dashlight glyph in:\n%s", b.String())
+	}
+}
+
+// mockSignal is a simple signal for testing
+type mockSignal struct {
+	name       string
+	detected   bool
+	checkDelay time.Duration
+}
+
+func (m *mockSignal) Check(ctx context.Context) bool {
+	if m.checkDelay > 0 {
+		select {
+		case <-time.After(m.checkDelay):
+			return m.detected
+		case <-ctx.Done():
+			return false
+		}
+	}
+	return m.detected
+}
+
+func (m *mockSignal) Name() string        { return m.name }
+func (m *mockSignal) Emoji() string       { return "🔍" }
+func (m *mockSignal) Diagnostic() string  { return "Test diagnostic" }
+func (m *mockSignal) Remediation() string { return "Test remediation" }
+
+func TestCheckAllWithTimingEmptySignals(t *testing.T) {
+	ctx := context.Background()
+	results, debugResults, completed := checkAllWithTiming(ctx, []signals.Signal{})
+
+	if len(results) != 0 {
+		t.Errorf("Expected 0 results, got %d", len(results))
+	}
+	if len(debugResults) != 0 {
+		t.Errorf("Expected 0 debug results, got %d", len(debugResults))
+	}
+	if !completed {
+		t.Error("Expected completed to be true for empty signals")
+	}
+}
+
+func TestCheckAllWithTimingSuccess(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+
+	sigs := []signals.Signal{
+		&mockSignal{name: "Signal1", detected: true},
+		&mockSignal{name: "Signal2", detected: false},
+		&mockSignal{name: "Signal3", detected: true},
+	}
+
+	results, debugResults, completed := checkAllWithTiming(ctx, sigs)
+
+	if len(results) != 3 {
+		t.Errorf("Expected 3 results, got %d", len(results))
+	}
+	if len(debugResults) != 3 {
+		t.Errorf("Expected 3 debug results, got %d", len(debugResults))
+	}
+	if !completed {
+		t.Error("Expected completed to be true")
+	}
+
+	// Verify detection status
+	detectedCount := 0
+	for _, r := range results {
+		if r.Detected {
+			detectedCount++
+		}
+	}
+	if detectedCount != 2 {
+		t.Errorf("Expected 2 detected signals, got %d", detectedCount)
+	}
+
+	// Verify debug results have duration
+	for _, dr := range debugResults {
+		if dr.Result.Signal == nil {
+			t.Error("Debug result should have signal reference")
+		}
+	}
+}
+
+func TestCheckAllWithTimingTimeout(t *testing.T) {
+	// Create a very short timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	defer cancel()
+
+	sigs := []signals.Signal{
+		&mockSignal{name: "FastSignal", detected: true, checkDelay: 0},
+		&mockSignal{name: "SlowSignal", detected: true, checkDelay: 100 * time.Millisecond},
+	}
+
+	results, debugResults, completed := checkAllWithTiming(ctx, sigs)
+
+	if len(results) != 2 {
+		t.Errorf("Expected 2 results, got %d", len(results))
+	}
+	if len(debugResults) != 2 {
+		t.Errorf("Expected 2 debug results, got %d", len(debugResults))
+	}
+	if completed {
+		t.Error("Expected completed to be false due to timeout")
+	}
+}
+
+func TestDisplayDebugInfoNoLights(t *testing.T) {
+	var b bytes.Buffer
+
+	envStart := time.Now()
+	envEnd := envStart.Add(100 * time.Microsecond)
+	sigStart := envEnd
+	sigEnd := sigStart.Add(5 * time.Millisecond)
+	total := sigEnd.Sub(envStart)
+
+	emptyLights := []dashlight{}
+	results := []signals.Result{
+		{Signal: &mockSignal{name: "TestSignal1", detected: false}, Detected: false},
+		{Signal: &mockSignal{name: "TestSignal2", detected: true}, Detected: true},
+	}
+	debugResults := []debugResult{
+		{Result: results[0], Duration: 1 * time.Millisecond},
+		{Result: results[1], Duration: 2 * time.Millisecond},
+	}
+
+	displayDebugInfo(&b, envStart, envEnd, sigStart, sigEnd, total, &emptyLights, results, debugResults)
+
+	output := b.String()
+
+	// Check for expected sections
+	if !strings.Contains(output, "DEBUG INFORMATION") {
+		t.Errorf("Expected DEBUG INFORMATION header in:\n%s", output)
+	}
+	if !strings.Contains(output, "PHASE TIMING") {
+		t.Errorf("Expected PHASE TIMING section in:\n%s", output)
+	}
+	if !strings.Contains(output, "No DASHLIGHT_ variables found") {
+		t.Errorf("Expected 'No DASHLIGHT_ variables found' in:\n%s", output)
+	}
+	if !strings.Contains(output, "SIGNAL CHECK RESULTS") {
+		t.Errorf("Expected SIGNAL CHECK RESULTS section in:\n%s", output)
+	}
+	if !strings.Contains(output, "1 detected") {
+		t.Errorf("Expected '1 detected' in:\n%s", output)
+	}
+}
+
+func TestDisplayDebugInfoWithLights(t *testing.T) {
+	var b bytes.Buffer
+
+	envStart := time.Now()
+	envEnd := envStart.Add(100 * time.Microsecond)
+	sigStart := envEnd
+	sigEnd := sigStart.Add(5 * time.Millisecond)
+	total := sigEnd.Sub(envStart)
+
+	lights := []dashlight{}
+	parseDashlightFromEnv(&lights, "DASHLIGHT_TEST_0021=test diagnostic")
+
+	results := []signals.Result{}
+	debugResults := []debugResult{}
+
+	displayDebugInfo(&b, envStart, envEnd, sigStart, sigEnd, total, &lights, results, debugResults)
+
+	output := b.String()
+
+	// Check for custom dashlight in output
+	if !strings.Contains(output, "Found 1 custom dashlight") {
+		t.Errorf("Expected 'Found 1 custom dashlight' in:\n%s", output)
+	}
+	if !strings.Contains(output, "TEST") {
+		t.Errorf("Expected 'TEST' dashlight name in:\n%s", output)
+	}
+}
+
+func TestDisplayDebugInfoSlowSignals(t *testing.T) {
+	var b bytes.Buffer
+
+	now := time.Now()
+
+	lights := []dashlight{}
+	results := []signals.Result{
+		{Signal: &mockSignal{name: "SlowSignal1"}, Detected: false},
+		{Signal: &mockSignal{name: "SlowSignal2"}, Detected: false},
+		{Signal: &mockSignal{name: "SlowSignal3"}, Detected: false},
+		{Signal: &mockSignal{name: "FastSignal"}, Detected: false},
+	}
+	debugResults := []debugResult{
+		{Result: results[0], Duration: 6 * time.Millisecond},
+		{Result: results[1], Duration: 7 * time.Millisecond},
+		{Result: results[2], Duration: 8 * time.Millisecond},
+		{Result: results[3], Duration: 1 * time.Millisecond},
+	}
+
+	displayDebugInfo(&b, now, now.Add(time.Microsecond), now, now.Add(time.Millisecond), time.Millisecond, &lights, results, debugResults)
+
+	output := b.String()
+
+	// Check for slow signal warning
+	if !strings.Contains(output, "exceeded 5ms threshold") {
+		t.Errorf("Expected slow signal warning in:\n%s", output)
+	}
+	// Check for top 3 slowest
+	if !strings.Contains(output, "Top 3 slowest") {
+		t.Errorf("Expected 'Top 3 slowest' in:\n%s", output)
+	}
+}
+
+// nonMatchingSignal doesn't match the expected type name pattern
+type nonMatchingSignal struct{}
+
+func (n *nonMatchingSignal) Check(_ context.Context) bool { return false }
+func (n *nonMatchingSignal) Name() string                 { return "NonMatching" }
+func (n *nonMatchingSignal) Emoji() string                { return "❓" }
+func (n *nonMatchingSignal) Diagnostic() string           { return "Test" }
+func (n *nonMatchingSignal) Remediation() string          { return "Test" }
+
+func TestSignalTypeToFilenameNoMatch(t *testing.T) {
+	// This signal type name won't match "*signals.XxxSignal" pattern
+	sig := &nonMatchingSignal{}
+	result := signalTypeToFilename(sig)
+
+	if result != "" {
+		t.Errorf("Expected empty string for non-matching signal type, got: %s", result)
+	}
+}
+
+// mockVerboseSignal implements VerboseRemediator interface
+type mockVerboseSignal struct {
+	mockSignal
+	verboseRemediation string
+}
+
+func (m *mockVerboseSignal) VerboseRemediation() string { return m.verboseRemediation }
+
+func TestDisplaySignalDiagnosticsVerboseRemediator(t *testing.T) {
+	var b bytes.Buffer
+
+	// Create a mock signal that implements VerboseRemediator
+	sig := &mockVerboseSignal{
+		mockSignal:         mockSignal{name: "VerboseTest", detected: true},
+		verboseRemediation: "Run this command: fix-it-all",
+	}
+	results := []signals.Result{
+		{Signal: sig, Detected: true},
+	}
+	emptyLights := []dashlight{}
+
+	// Enable verbose mode
+	args.VerboseMode = true
+	defer func() { args.VerboseMode = false }()
+
+	displaySignalDiagnostics(&b, results, &emptyLights)
+
+	output := b.String()
+
+	// Should contain the verbose remediation
+	if !strings.Contains(output, "🔧 Run this command: fix-it-all") {
+		t.Errorf("Expected verbose remediation in:\n%s", output)
+	}
+}
+
+func TestDisplaySignalDiagnosticsEmptyVerboseRemediation(t *testing.T) {
+	var b bytes.Buffer
+
+	// Create a mock signal with empty verbose remediation
+	sig := &mockVerboseSignal{
+		mockSignal:         mockSignal{name: "EmptyVerbose", detected: true},
+		verboseRemediation: "",
+	}
+	results := []signals.Result{
+		{Signal: sig, Detected: true},
+	}
+	emptyLights := []dashlight{}
+
+	// Enable verbose mode
+	args.VerboseMode = true
+	defer func() { args.VerboseMode = false }()
+
+	displaySignalDiagnostics(&b, results, &emptyLights)
+
+	output := b.String()
+
+	// Should NOT contain the verbose remediation prefix when empty
+	if strings.Contains(output, "🔧 \n") {
+		t.Errorf("Should not show empty verbose remediation in:\n%s", output)
 	}
 }

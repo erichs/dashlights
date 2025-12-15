@@ -2,7 +2,6 @@ package signals
 
 import (
 	"context"
-	"sync"
 )
 
 // Signal represents a security hygiene check.
@@ -53,38 +52,85 @@ type Result struct {
 	Error    error
 }
 
-// CheckAll runs all signal checks concurrently and returns results
-func CheckAll(ctx context.Context, signals []Signal) []Result {
+// indexedResult pairs a result with its index for channel-based collection
+type indexedResult struct {
+	idx    int
+	result Result
+}
+
+// CheckAll runs all signal checks concurrently and returns results.
+// The bool return value is true if all signals completed, false if timeout occurred.
+func CheckAll(ctx context.Context, signals []Signal) ([]Result, bool) {
+	if len(signals) == 0 {
+		return []Result{}, true
+	}
+
 	results := make([]Result, len(signals))
-	var wg sync.WaitGroup
+	resultChan := make(chan indexedResult, len(signals))
 
 	for i, sig := range signals {
-		wg.Add(1)
 		go func(idx int, s Signal) {
-			defer wg.Done()
-
 			// Use a panic recovery to ensure one bad signal doesn't crash everything
 			defer func() {
 				if r := recover(); r != nil {
-					results[idx] = Result{
-						Signal:   s,
-						Detected: false,
-						Error:    nil,
+					resultChan <- indexedResult{
+						idx: idx,
+						result: Result{
+							Signal:   s,
+							Detected: false,
+							Error:    nil,
+						},
 					}
 				}
 			}()
 
 			detected := s.Check(ctx)
-			results[idx] = Result{
-				Signal:   s,
-				Detected: detected,
-				Error:    nil,
+			resultChan <- indexedResult{
+				idx: idx,
+				result: Result{
+					Signal:   s,
+					Detected: detected,
+					Error:    nil,
+				},
 			}
 		}(i, sig)
 	}
 
-	wg.Wait()
-	return results
+	// Collect results until context expires or all complete
+	completed := 0
+	for completed < len(signals) {
+		select {
+		case ir := <-resultChan:
+			results[ir.idx] = ir.result
+			completed++
+		case <-ctx.Done():
+			// Drain any results that arrived just before/during timeout
+		drainLoop:
+			for {
+				select {
+				case ir := <-resultChan:
+					results[ir.idx] = ir.result
+					completed++
+				default:
+					break drainLoop
+				}
+			}
+
+			// Mark unreceived signals with empty results (preserving Signal reference)
+			for i, sig := range signals {
+				if results[i].Signal == nil {
+					results[i] = Result{Signal: sig, Detected: false, Error: nil}
+				}
+			}
+			// Note: Goroutines that haven't completed will finish and send to the
+			// buffered channel (non-blocking). Since this is a CLI that exits
+			// immediately after displaying results, os.Exit() cleans up any
+			// remaining goroutines - no explicit cancellation needed.
+			return results, false // Partial results
+		}
+	}
+
+	return results, true // All complete
 }
 
 // CountDetected returns the number of detected signals

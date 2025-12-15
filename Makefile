@@ -1,4 +1,4 @@
-.PHONY: all help build build-all test test-integration fmt fmt-check check-ctx clean install hooks coverage coverage-html coverage-signals gosec vet revive install-fabric-pattern release
+.PHONY: all help build build-all test test-integration fmt fmt-check check-ctx clean install hooks coverage coverage-html coverage-signals gosec vet revive install-fabric-pattern release load-light load-medium load-heavy load stress-test
 
 # Detect Go bin directory portably
 GOBIN := $(shell go env GOBIN)
@@ -29,6 +29,10 @@ help:
 	@echo "  make clean             - Remove built binaries"
 	@echo "  make install           - Install dashlights to GOPATH/bin"
 	@echo "  make hooks             - Install Git hooks from scripts/hooks/"
+	@echo "  make load-light        - Generate light system load (Ctrl+C to stop)"
+	@echo "  make load-medium       - Generate medium system load (Ctrl+C to stop)"
+	@echo "  make load-heavy        - Generate heavy system load (Ctrl+C to stop)"
+	@echo "  make stress-test       - Run dashlights repeatedly under load with stats"
 	@echo "  make install-fabric-pattern - Install Fabric pattern for changelog generation"
 	@echo "  make release           - Create a new release with AI-generated changelog"
 
@@ -215,4 +219,28 @@ install-fabric-pattern:
 # Create a new release with AI-generated changelog
 release:
 	@bash scripts/release.sh
+
+# Load testing targets
+load-light:
+	@echo "Starting LIGHT system load (Ctrl+C to stop)..."
+	@bash scripts/load-test.sh light
+
+load-medium:
+	@echo "Starting MEDIUM system load (Ctrl+C to stop)..."
+	@bash scripts/load-test.sh medium
+
+load-heavy:
+	@echo "Starting HEAVY system load (Ctrl+C to stop)..."
+	@bash scripts/load-test.sh heavy
+
+load: load-light  # Default to light load
+
+# Stress test - run dashlights repeatedly under load
+stress-test:
+	@if [ ! -f dashlights ]; then \
+		echo "Building dashlights first..."; \
+		$(MAKE) build; \
+	fi
+	@echo "Stress testing dashlights..."
+	@bash scripts/stress-dashlights.sh
 

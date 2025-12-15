@@ -28,7 +28,7 @@ func TestConcurrentCheckAll(t *testing.T) {
 			ctx := context.Background()
 
 			// Run the checks
-			results := CheckAll(ctx, signals)
+			results, _ := CheckAll(ctx, signals)
 
 			// Verify we got results for all signals
 			if len(results) != len(signals) {

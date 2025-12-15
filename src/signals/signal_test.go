@@ -37,7 +37,11 @@ func TestCheckAll(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	results := CheckAll(ctx, signals)
+	results, completed := CheckAll(ctx, signals)
+
+	if !completed {
+		t.Error("Expected CheckAll to complete successfully")
+	}
 
 	if len(results) != 3 {
 		t.Errorf("Expected 3 results, got %d", len(results))
@@ -66,8 +70,12 @@ func TestCheckAllConcurrency(t *testing.T) {
 
 	ctx := context.Background()
 	start := time.Now()
-	results := CheckAll(ctx, signals)
+	results, completed := CheckAll(ctx, signals)
 	elapsed := time.Since(start)
+
+	if !completed {
+		t.Error("Expected CheckAll to complete successfully")
+	}
 
 	// If running concurrently, should take ~10ms, not ~30ms
 	if elapsed > 25*time.Millisecond {
@@ -76,6 +84,59 @@ func TestCheckAllConcurrency(t *testing.T) {
 
 	if len(results) != 3 {
 		t.Errorf("Expected 3 results, got %d", len(results))
+	}
+}
+
+func TestCheckAllPartialResults(t *testing.T) {
+	// Create a mix of fast and slow signals
+	signals := []Signal{
+		&mockSignal{name: "fast1", shouldDetect: true, delay: 0},
+		&mockSignal{name: "slow1", shouldDetect: true, delay: 100 * time.Millisecond}, // Will timeout
+		&mockSignal{name: "fast2", shouldDetect: true, delay: 0},
+	}
+
+	// Use a short timeout that will expire before the slow signal completes
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	defer cancel()
+
+	results, completed := CheckAll(ctx, signals)
+
+	// Should return partial results (not completed)
+	if completed {
+		t.Error("Expected CheckAll to return partial results (completed=false)")
+	}
+
+	// Should still have all 3 result slots
+	if len(results) != 3 {
+		t.Errorf("Expected 3 results, got %d", len(results))
+	}
+
+	// Fast signals should have their results (detected=true)
+	if !results[0].Detected {
+		t.Error("Expected fast1 to be detected")
+	}
+	if !results[2].Detected {
+		t.Error("Expected fast2 to be detected")
+	}
+
+	// Slow signal should have a result with Signal set (for diagnostics) but Detected=false
+	if results[1].Signal == nil {
+		t.Error("Expected slow signal to have Signal reference set")
+	}
+	if results[1].Detected {
+		t.Error("Expected slow signal to have Detected=false (timed out)")
+	}
+}
+
+func TestCheckAllEmptySignals(t *testing.T) {
+	ctx := context.Background()
+	results, completed := CheckAll(ctx, []Signal{})
+
+	if !completed {
+		t.Error("Expected empty signals to complete successfully")
+	}
+	if len(results) != 0 {
+		t.Errorf("Expected 0 results for empty signals, got %d", len(results))
 	}
 }
 
