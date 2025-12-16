@@ -2,9 +2,16 @@ package signals
 
 import (
 	"context"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
+)
+
+// Performance limits to prevent runaway scans on large directory trees
+const (
+	maxInitPyDepth = 6   // Max directory depth to traverse
+	maxInitPyDirs  = 500 // Max directories to visit before giving up
 )
 
 // MissingInitPySignal checks for Python packages missing __init__.py
@@ -48,10 +55,17 @@ func (s *MissingInitPySignal) Check(ctx context.Context) bool {
 		return false
 	}
 
+	// Performance gate: skip if not in a Python project
+	if !isPythonProject() {
+		return false
+	}
+
 	s.foundDirs = []string{}
+	dirsVisited := 0
 
 	// Walk the current directory looking for Python packages
-	err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
+	// Use WalkDir for better performance (avoids extra Lstat calls)
+	err := filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
 		// Check if context is cancelled
 		select {
 		case <-ctx.Done():
@@ -64,14 +78,26 @@ func (s *MissingInitPySignal) Check(ctx context.Context) bool {
 		}
 
 		// Only process directories
-		if info.IsDir() {
+		if d.IsDir() {
 			// Don't check the root directory itself, but continue walking
 			// IMPORTANT: Check this BEFORE checking name, because "." starts with "."!
 			if path == "." {
 				return nil
 			}
 
-			name := info.Name()
+			// Check depth limit (count path separators)
+			depth := strings.Count(path, string(filepath.Separator)) + 1
+			if depth > maxInitPyDepth {
+				return filepath.SkipDir
+			}
+
+			// Check directory count limit
+			dirsVisited++
+			if dirsVisited > maxInitPyDirs {
+				return filepath.SkipAll
+			}
+
+			name := d.Name()
 
 			// Skip hidden directories and common non-package directories
 			if strings.HasPrefix(name, ".") ||
@@ -89,6 +115,8 @@ func (s *MissingInitPySignal) Check(ctx context.Context) bool {
 			hasInit := hasInitPy(path)
 			if isPkg && !hasInit {
 				s.foundDirs = append(s.foundDirs, path)
+				// Early exit: we found a problem, no need to continue
+				return filepath.SkipAll
 			}
 		}
 
@@ -100,6 +128,31 @@ func (s *MissingInitPySignal) Check(ctx context.Context) bool {
 	}
 
 	return len(s.foundDirs) > 0
+}
+
+// isPythonProject checks if the current directory looks like a Python project.
+// This is a performance gate to avoid scanning non-Python directories.
+func isPythonProject() bool {
+	// Check for common Python project markers
+	markers := []string{"setup.py", "pyproject.toml", "requirements.txt"}
+	for _, m := range markers {
+		if _, err := os.Stat(m); err == nil {
+			return true
+		}
+	}
+
+	// Check for any .py files in the root directory
+	entries, err := os.ReadDir(".")
+	if err != nil {
+		return false
+	}
+	for _, e := range entries {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".py") {
+			return true
+		}
+	}
+
+	return false
 }
 
 // isPythonPackage checks if a directory contains .py files
