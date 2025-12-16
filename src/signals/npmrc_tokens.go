@@ -47,6 +47,15 @@ func (s *NpmrcTokensSignal) Check(ctx context.Context) bool {
 		return false
 	}
 
+	// Skip if we're in the home directory - .npmrc with tokens is expected there
+	homeDir, err := os.UserHomeDir()
+	if err == nil {
+		cwd, cwdErr := os.Getwd()
+		if cwdErr == nil && cwd == homeDir {
+			return false
+		}
+	}
+
 	// Check if .npmrc exists in current directory
 	file, err := os.Open(".npmrc")
 	if err != nil {
