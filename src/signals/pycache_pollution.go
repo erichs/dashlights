@@ -2,8 +2,16 @@ package signals
 
 import (
 	"context"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
+)
+
+// Performance limits to prevent runaway scans on large directory trees
+const (
+	maxPyCacheDepth = 6   // Max directory depth to traverse
+	maxPyCacheDirs  = 500 // Max directories to visit before giving up
 )
 
 // PyCachePollutionSignal checks for __pycache__ directories that aren't properly ignored
@@ -47,16 +55,23 @@ func (s *PyCachePollutionSignal) Check(ctx context.Context) bool {
 		return false
 	}
 
-	s.foundDirs = []string{}
-
 	// Check if we're in a git repository
 	if _, err := os.Stat(".git"); os.IsNotExist(err) {
 		// Not a git repo, no issue
 		return false
 	}
 
+	// Performance gate: skip if not in a Python project
+	if !isPythonProject() {
+		return false
+	}
+
+	s.foundDirs = []string{}
+	dirsVisited := 0
+
 	// Walk the current directory looking for __pycache__ directories
-	err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
+	// Use WalkDir for better performance (avoids extra Lstat calls)
+	err := filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
 		// Check if context is cancelled
 		select {
 		case <-ctx.Done():
@@ -68,16 +83,40 @@ func (s *PyCachePollutionSignal) Check(ctx context.Context) bool {
 			return nil // Skip errors
 		}
 
-		// Skip .git directory
-		if info.IsDir() && info.Name() == ".git" {
-			return filepath.SkipDir
-		}
+		if d.IsDir() {
+			// Skip root directory
+			if path == "." {
+				return nil
+			}
 
-		// Check for __pycache__ directories
-		if info.IsDir() && info.Name() == "__pycache__" {
-			// Check if this directory is tracked by git
-			if isTrackedByGit(path) {
-				s.foundDirs = append(s.foundDirs, path)
+			// Check depth limit
+			depth := strings.Count(path, string(filepath.Separator)) + 1
+			if depth > maxPyCacheDepth {
+				return filepath.SkipDir
+			}
+
+			// Check directory count limit
+			dirsVisited++
+			if dirsVisited > maxPyCacheDirs {
+				return filepath.SkipAll
+			}
+
+			name := d.Name()
+
+			// Skip common non-Python directories (dot-prefix check covers .git)
+			if name == "node_modules" || name == "venv" || name == "env" ||
+				strings.HasPrefix(name, ".") {
+				return filepath.SkipDir
+			}
+
+			// Check for __pycache__ directories
+			if name == "__pycache__" {
+				// Check if this directory has .pyc files (pollution)
+				if isTrackedByGit(path) {
+					s.foundDirs = append(s.foundDirs, path)
+					// Early exit: we found a problem, no need to continue
+					return filepath.SkipAll
+				}
 			}
 		}
 

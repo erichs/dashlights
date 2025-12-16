@@ -265,6 +265,19 @@ Python creates `__pycache__` directories to store compiled bytecode (`.pyc` file
 - **Cleaned** before distribution
 
 
+## Performance
+
+This signal uses several optimizations to maintain the 10ms execution target:
+
+**Project Detection Gate**: The signal only runs if the current directory looks like a Python project (contains `setup.py`, `pyproject.toml`, `requirements.txt`, or `.py` files in the root). This prevents expensive directory scans in non-Python directories.
+
+**Traversal Limits**:
+- Maximum depth of 6 levels (Python packages rarely go deeper)
+- Maximum of 500 directories visited
+- Early exit after finding the first `__pycache__` with `.pyc` files
+
+If you're in a directory that contains Python projects but isn't itself a Python project (like `~/repos`), the signal will skip silently rather than scanning all subdirectories.
+
 ## Disabling This Signal
 
 To disable this signal, set the environment variable:

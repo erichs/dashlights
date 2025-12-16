@@ -209,3 +209,31 @@ func TestNpmrcTokensSignal_Disabled(t *testing.T) {
 		t.Error("Expected false when signal is disabled via environment variable")
 	}
 }
+
+func TestNpmrcTokensSignal_SkipsHomeDirectory(t *testing.T) {
+	// Get home directory
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		t.Skip("Could not get home directory")
+	}
+
+	// Save original directory
+	originalDir, _ := os.Getwd()
+	defer os.Chdir(originalDir)
+
+	// Change to home directory
+	if err := os.Chdir(homeDir); err != nil {
+		t.Skip("Could not change to home directory")
+	}
+
+	// The signal should return false when in home directory,
+	// regardless of whether .npmrc exists or has tokens
+	// (we don't modify the actual .npmrc - just test the skip logic)
+	signal := NewNpmrcTokensSignal()
+	ctx := context.Background()
+
+	result := signal.Check(ctx)
+	if result {
+		t.Error("Expected false when in home directory - .npmrc with tokens is expected there")
+	}
+}
