@@ -86,5 +86,12 @@ signs:
     output: true
 
 sboms:
-  - artifacts: archive
+  - id: default
+    artifacts: archive
+    documents:
+      - "${artifact}.sbom.json"
+    args:
+      - "$artifact"
+      - "--output"
+      - "cyclonedx-json=$document"
 
