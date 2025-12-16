@@ -3,6 +3,7 @@ package signals
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"testing"
@@ -337,4 +338,89 @@ func TestContextCancellation_FileScanning(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestContextCancellation_SSHAgentBloat verifies that ssh_agent_bloat respects context cancellation
+func TestContextCancellation_SSHAgentBloat(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping context cancellation test in short mode")
+	}
+
+	// Create a mock agent that delays response (simulates slow agent under load)
+	sockPath := createSlowMockAgent(t, 100*time.Millisecond)
+
+	originalSock := os.Getenv("SSH_AUTH_SOCK")
+	os.Setenv("SSH_AUTH_SOCK", sockPath)
+	defer func() {
+		if originalSock != "" {
+			os.Setenv("SSH_AUTH_SOCK", originalSock)
+		} else {
+			os.Unsetenv("SSH_AUTH_SOCK")
+		}
+	}()
+
+	signal := NewSSHAgentBloatSignal()
+
+	// Create a context with very short timeout (1ms)
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Millisecond)
+	defer cancel()
+
+	// Wait for context to expire
+	time.Sleep(2 * time.Millisecond)
+
+	// The check should return quickly due to context cancellation
+	start := time.Now()
+	result := signal.Check(ctx)
+	elapsed := time.Since(start)
+
+	// Should return false when context is cancelled
+	if result {
+		t.Error("Expected false when context is cancelled")
+	}
+
+	// Should complete quickly (within 10ms) even with slow agent
+	if elapsed > 10*time.Millisecond {
+		t.Errorf("Check took too long: %v (expected < 10ms)", elapsed)
+	}
+}
+
+// createSlowMockAgent creates a mock SSH agent that delays before responding
+func createSlowMockAgent(t *testing.T, delay time.Duration) string {
+	sockPath := filepath.Join("/tmp", fmt.Sprintf("test_agent_slow_%d.sock", time.Now().UnixNano()))
+
+	listener, err := net.Listen("unix", sockPath)
+	if err != nil {
+		t.Fatalf("Failed to create mock agent socket: %v", err)
+	}
+
+	t.Cleanup(func() {
+		listener.Close()
+		os.Remove(sockPath)
+	})
+
+	go func() {
+		for {
+			conn, err := listener.Accept()
+			if err != nil {
+				return
+			}
+			go func(c net.Conn) {
+				defer c.Close()
+				// Read request
+				header := make([]byte, 5)
+				c.Read(header)
+				// Delay before responding (simulates slow agent)
+				time.Sleep(delay)
+				// Send response with 3 keys
+				response := make([]byte, 9)
+				response[0], response[1], response[2], response[3] = 0, 0, 0, 5
+				response[4] = 12 // msgIdentitiesAnswer
+				response[5], response[6], response[7], response[8] = 0, 0, 0, 3
+				c.Write(response)
+			}(conn)
+		}
+	}()
+
+	time.Sleep(5 * time.Millisecond)
+	return sockPath
 }
