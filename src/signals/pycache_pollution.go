@@ -62,7 +62,7 @@ func (s *PyCachePollutionSignal) Check(ctx context.Context) bool {
 	}
 
 	// Performance gate: skip if not in a Python project
-	if !isPythonProjectForPyCache() {
+	if !isPythonProject() {
 		return false
 	}
 
@@ -103,12 +103,7 @@ func (s *PyCachePollutionSignal) Check(ctx context.Context) bool {
 
 			name := d.Name()
 
-			// Skip .git directory
-			if name == ".git" {
-				return filepath.SkipDir
-			}
-
-			// Skip common non-Python directories
+			// Skip common non-Python directories (dot-prefix check covers .git)
 			if name == "node_modules" || name == "venv" || name == "env" ||
 				strings.HasPrefix(name, ".") {
 				return filepath.SkipDir
@@ -133,31 +128,6 @@ func (s *PyCachePollutionSignal) Check(ctx context.Context) bool {
 	}
 
 	return len(s.foundDirs) > 0
-}
-
-// isPythonProjectForPyCache checks if the current directory looks like a Python project.
-// This is a performance gate to avoid scanning non-Python directories.
-func isPythonProjectForPyCache() bool {
-	// Check for common Python project markers
-	markers := []string{"setup.py", "pyproject.toml", "requirements.txt"}
-	for _, m := range markers {
-		if _, err := os.Stat(m); err == nil {
-			return true
-		}
-	}
-
-	// Check for any .py files in the root directory
-	entries, err := os.ReadDir(".")
-	if err != nil {
-		return false
-	}
-	for _, e := range entries {
-		if !e.IsDir() && strings.HasSuffix(e.Name(), ".py") {
-			return true
-		}
-	}
-
-	return false
 }
 
 // isTrackedByGit checks if a path is tracked by git
