@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"time"
@@ -52,7 +53,12 @@ func (s *SSHAgentBloatSignal) Remediation() string {
 
 // Check queries the SSH agent and reports if too many keys are loaded.
 func (s *SSHAgentBloatSignal) Check(ctx context.Context) bool {
-	_ = ctx
+	// Early exit if context already done
+	select {
+	case <-ctx.Done():
+		return false
+	default:
+	}
 
 	// Check if this signal is disabled via environment variable
 	if os.Getenv("DASHLIGHTS_DISABLE_SSH_AGENT_BLOAT") != "" {
@@ -67,7 +73,7 @@ func (s *SSHAgentBloatSignal) Check(ctx context.Context) bool {
 	}
 
 	// Get the number of keys loaded in the agent
-	count, err := getAgentKeyCount(sockPath)
+	count, err := getAgentKeyCount(ctx, sockPath)
 	if err != nil {
 		// Can't communicate with agent - not a problem we can detect
 		return false
@@ -78,15 +84,23 @@ func (s *SSHAgentBloatSignal) Check(ctx context.Context) bool {
 }
 
 // getAgentKeyCount queries the SSH agent socket to count loaded keys
-func getAgentKeyCount(socketPath string) (uint32, error) {
-	// Connect to the Unix socket
-	conn, err := net.Dial("unix", socketPath)
+func getAgentKeyCount(ctx context.Context, socketPath string) (uint32, error) {
+	// Early exit if context already done
+	select {
+	case <-ctx.Done():
+		return 0, ctx.Err()
+	default:
+	}
+
+	// Use dialer with context for cancellable connection
+	dialer := net.Dialer{Timeout: socketTimeout}
+	conn, err := dialer.DialContext(ctx, "unix", socketPath)
 	if err != nil {
 		return 0, err
 	}
 	defer conn.Close()
 
-	// Set a tight deadline to avoid blocking
+	// Set a tight deadline to avoid blocking on read/write
 	if err := conn.SetDeadline(time.Now().Add(socketTimeout)); err != nil {
 		return 0, err
 	}
@@ -101,39 +115,22 @@ func getAgentKeyCount(socketPath string) (uint32, error) {
 
 	// Read response header (5 bytes: length + type)
 	header := make([]byte, 5)
-	n, err := conn.Read(header)
-	if err != nil {
+	if _, err := io.ReadFull(conn, header); err != nil {
 		return 0, err
 	}
 
-	// Verify we read enough bytes (need at least 5 bytes for header)
-	if n < 5 {
-		return 0, fmt.Errorf("incomplete header: got %d bytes, expected 5", n)
-	}
-
 	// Verify we got SSH_AGENT_IDENTITIES_ANSWER
-	// Additional bounds check to satisfy gosec G602
-	if len(header) < 5 {
-		return 0, fmt.Errorf("header too short: %d bytes", len(header))
-	}
-	if header[4] != msgIdentitiesAnswer {
+	// Bounds check satisfies gosec G602 (io.ReadFull guarantees 5 bytes on success)
+	if len(header) >= 5 && header[4] != msgIdentitiesAnswer {
 		return 0, fmt.Errorf("unexpected message type: %d", header[4])
 	}
 
 	// Read the key count (next 4 bytes)
 	countBuf := make([]byte, 4)
-	n, err = conn.Read(countBuf)
-	if err != nil {
+	if _, err := io.ReadFull(conn, countBuf); err != nil {
 		return 0, err
 	}
 
-	// Verify we read enough bytes (need 4 bytes for count)
-	if n < 4 {
-		return 0, fmt.Errorf("incomplete count: got %d bytes, expected 4", n)
-	}
-
 	// Parse as big-endian uint32
-	count := binary.BigEndian.Uint32(countBuf)
-
-	return count, nil
+	return binary.BigEndian.Uint32(countBuf), nil
 }
