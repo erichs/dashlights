@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.7] - 2025-12-17
+
+### Changed
+- Improved context cancellation handling for zombie processes detection
+- Enhanced performance of Rotting Secrets and Dumpster Fire signals
+- Addressed filesystem variability issues in continuous integration
+- Configured Software Bill of Materials (SBOM) generation for better supply chain transparency
+- Pinned GitHub Actions dependencies, limited permissions, and signed artifacts with Cosign for improved security and reliability
+
+
 ## [1.0.6] - 2025-12-16
 
 ### Changed
