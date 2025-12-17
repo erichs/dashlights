@@ -59,7 +59,17 @@ jobs:
         run: cd src && go generate
 
       - name: Install Cosign
-        uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
+        uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3.9.1
+
+      - name: Install Syft
+        uses: anchore/sbom-action/download-syft@43a17d6e7add2b5535efe4dcae9952337c479a93 # v0.20.11
+
+      - name: Generate Source SBOM
+        run: |
+          VERSION_NUM=${{ needs.check-release.outputs.tag_name }}
+          VERSION_NUM=${VERSION_NUM#v}
+          # Generate SBOM from source (includes go.mod dependencies)
+          syft dir:. --output "cyclonedx-json=dashlights_${VERSION_NUM}_source.sbom.json"
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6
@@ -69,6 +79,14 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Source SBOM
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=${{ needs.check-release.outputs.tag_name }}
+          VERSION_NUM=${VERSION#v}
+          gh release upload "$VERSION" "dashlights_${VERSION_NUM}_source.sbom.json" --clobber
 
   # Build, sign, and notarize macOS binaries separately
   darwin-release:
@@ -91,6 +109,9 @@ jobs:
 
       - name: Generate repository URL
         run: cd src && go generate
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3.9.1
 
       - name: Import Code Signing Certificate
         env:
@@ -213,8 +234,20 @@ jobs:
         run: |
           VERSION_NUM=${VERSION#v}
           cd dist
-          shasum -a 256 dashlights_${VERSION_NUM}_Darwin_*.zip > darwin_checksums.txt
-          cat darwin_checksums.txt
+          shasum -a 256 dashlights_${VERSION_NUM}_Darwin_*.zip > checksums_darwin.txt
+          cat checksums_darwin.txt
+
+      - name: Sign Darwin Checksums with Cosign
+        env:
+          COSIGN_EXPERIMENTAL: "1"
+        run: |
+          cd dist
+          # Keyless signing using GitHub OIDC identity
+          cosign sign-blob \
+            --output-certificate=checksums_darwin.txt.pem \
+            --output-signature=checksums_darwin.txt.sig \
+            checksums_darwin.txt \
+            --yes
 
       - name: Upload Darwin Assets to Release
         env:
@@ -222,20 +255,14 @@ jobs:
         run: |
           VERSION_NUM=${VERSION#v}
 
-          # Upload archives
+          # Upload archives, checksums, and signature
           gh release upload "$VERSION" \
             dist/dashlights_${VERSION_NUM}_Darwin_x86_64.zip \
             dist/dashlights_${VERSION_NUM}_Darwin_arm64.zip \
+            dist/checksums_darwin.txt \
+            dist/checksums_darwin.txt.sig \
+            dist/checksums_darwin.txt.pem \
             --clobber
-
-          # Append Darwin checksums to existing checksums.txt
-          gh release download "$VERSION" -p checksums.txt -O dist/checksums.txt || true
-          if [ -f dist/checksums.txt ]; then
-            cat dist/darwin_checksums.txt >> dist/checksums.txt
-          else
-            cp dist/darwin_checksums.txt dist/checksums.txt
-          fi
-          gh release upload "$VERSION" dist/checksums.txt --clobber
 
       - name: Cleanup
         if: always()

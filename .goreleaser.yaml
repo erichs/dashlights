@@ -47,7 +47,7 @@ archives:
       - README.md
 
 checksum:
-  name_template: 'checksums.txt'
+  name_template: 'checksums_linux.txt'
 
 snapshot:
   version_template: "{{ incpatch .Version }}-next"
@@ -85,13 +85,6 @@ signs:
     artifacts: checksum
     output: true
 
-sboms:
-  - id: default
-    artifacts: archive
-    documents:
-      - "${artifact}.sbom.json"
-    args:
-      - "$artifact"
-      - "--output"
-      - "cyclonedx-json=$document"
+# Source SBOM is generated manually in release.yml before goreleaser runs
+# This provides actual dependency information from go.mod rather than empty archive scans
 
