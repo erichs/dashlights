@@ -65,6 +65,7 @@ func (s *RottingSecretsSignal) Check(ctx context.Context) bool {
 
 	patterns := filestat.DefaultSensitivePatterns()
 	dirs := filestat.GetHotZoneDirectories()
+	config := filestat.DefaultScanConfig()
 
 	// Track unique files to avoid double-counting when $PWD overlaps with other dirs
 	seenPaths := make(map[string]bool)
@@ -82,12 +83,12 @@ func (s *RottingSecretsSignal) Check(ctx context.Context) bool {
 			continue
 		}
 
-		matches, err := patterns.ScanDirectory(dir)
+		result, err := patterns.ScanDirectory(ctx, dir, config)
 		if err != nil {
 			continue // Skip directories we can't read
 		}
 
-		for _, match := range matches {
+		for _, match := range result.Matches {
 			// Deduplicate paths
 			if seenPaths[match.Path] {
 				continue

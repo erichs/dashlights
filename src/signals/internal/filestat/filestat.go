@@ -3,11 +3,51 @@
 package filestat
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 )
+
+// Performance limits for sensitive file scanning.
+// These cap worst-case behavior when scanning large directories.
+const (
+	// maxMatchesPerDir limits how many files to stat per directory.
+	// After this many matches, we've proven the directory has issues.
+	maxMatchesPerDir = 10
+
+	// maxEntriesPerDir limits directory entries to process before giving up.
+	// Handles pathological cases like /tmp with thousands of files.
+	maxEntriesPerDir = 500
+
+	// perDirTimeout is the maximum time budget for scanning a single directory.
+	// With 4 hot zones, allows ~8ms total leaving 2ms buffer for 10ms budget.
+	perDirTimeout = 2 * time.Millisecond
+)
+
+// ScanConfig contains configuration for directory scanning.
+type ScanConfig struct {
+	MaxMatches int           // Max matches to return (0 = unlimited)
+	MaxEntries int           // Max entries to process (0 = unlimited)
+	Timeout    time.Duration // Per-directory timeout (0 = no timeout)
+}
+
+// DefaultScanConfig returns conservative limits, future work may make this user-configurable
+func DefaultScanConfig() ScanConfig {
+	return ScanConfig{
+		MaxMatches: maxMatchesPerDir,
+		MaxEntries: maxEntriesPerDir,
+		Timeout:    perDirTimeout,
+	}
+}
+
+// ScanResult contains scan results and metadata.
+type ScanResult struct {
+	Matches   []MatchResult
+	Truncated bool   // True if scan was limited by MaxMatches/MaxEntries/Timeout
+	Reason    string // Why scan was truncated: "max_matches", "max_entries", or "timeout"
+}
 
 // SensitiveFilePatterns defines patterns for detecting sensitive files.
 // These are designed for fast name-only matching (no content scanning).
@@ -85,25 +125,72 @@ func (p *SensitiveFilePatterns) MatchFile(name string) bool {
 // ScanDirectory scans a directory for files matching the patterns.
 // It returns only regular files (no directories, symlinks, etc.).
 // This function is shallow - it does not recurse into subdirectories.
-func (p *SensitiveFilePatterns) ScanDirectory(dirPath string) ([]MatchResult, error) {
-	entries, err := os.ReadDir(dirPath)
-	if err != nil {
-		return nil, err
+// It accepts a context for cancellation and a ScanConfig for limits.
+func (p *SensitiveFilePatterns) ScanDirectory(ctx context.Context, dirPath string, config ScanConfig) (ScanResult, error) {
+	result := ScanResult{}
+
+	// Check context before starting
+	select {
+	case <-ctx.Done():
+		result.Truncated = true
+		result.Reason = "timeout"
+		return result, nil
+	default:
 	}
 
-	var results []MatchResult
+	// Set up per-directory timeout if configured
+	var scanCtx context.Context
+	var cancel context.CancelFunc
+	if config.Timeout > 0 {
+		scanCtx, cancel = context.WithTimeout(ctx, config.Timeout)
+		defer cancel()
+	} else {
+		scanCtx = ctx
+	}
+
+	entries, err := os.ReadDir(dirPath)
+	if err != nil {
+		return result, err
+	}
+
+	entriesProcessed := 0
+
 	for _, entry := range entries {
+		// Check context cancellation
+		select {
+		case <-scanCtx.Done():
+			result.Truncated = true
+			result.Reason = "timeout"
+			return result, nil
+		default:
+		}
+
+		// Check entries limit
+		if config.MaxEntries > 0 && entriesProcessed >= config.MaxEntries {
+			result.Truncated = true
+			result.Reason = "max_entries"
+			return result, nil
+		}
+		entriesProcessed++
+
 		// Skip directories
 		if entry.IsDir() {
 			continue
 		}
 
-		// Check if name matches patterns
+		// Check if name matches patterns (fast, no syscall)
 		if !p.MatchFile(entry.Name()) {
 			continue
 		}
 
-		// Get file info for modification time
+		// Check matches limit BEFORE expensive stat
+		if config.MaxMatches > 0 && len(result.Matches) >= config.MaxMatches {
+			result.Truncated = true
+			result.Reason = "max_matches"
+			return result, nil
+		}
+
+		// Get file info for modification time (expensive stat syscall)
 		info, err := entry.Info()
 		if err != nil {
 			continue // Skip files we can't stat
@@ -114,14 +201,14 @@ func (p *SensitiveFilePatterns) ScanDirectory(dirPath string) ([]MatchResult, er
 			continue
 		}
 
-		results = append(results, MatchResult{
+		result.Matches = append(result.Matches, MatchResult{
 			Path:    filepath.Join(dirPath, entry.Name()),
 			ModTime: info.ModTime(),
 			Size:    info.Size(),
 		})
 	}
 
-	return results, nil
+	return result, nil
 }
 
 // IsOlderThan checks if a file's modification time is older than the threshold.

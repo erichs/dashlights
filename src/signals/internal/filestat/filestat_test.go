@@ -1,6 +1,8 @@
 package filestat
 
 import (
+	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -114,21 +116,154 @@ func TestScanDirectory(t *testing.T) {
 	}
 
 	patterns := DefaultSensitivePatterns()
-	results, err := patterns.ScanDirectory(tmpDir)
+	// Use empty config for no limits
+	result, err := patterns.ScanDirectory(context.Background(), tmpDir, ScanConfig{})
 	if err != nil {
 		t.Fatalf("ScanDirectory error: %v", err)
 	}
 
-	if len(results) != 3 {
-		t.Errorf("Expected 3 matches, got %d", len(results))
+	if len(result.Matches) != 3 {
+		t.Errorf("Expected 3 matches, got %d", len(result.Matches))
+	}
+	if result.Truncated {
+		t.Error("Did not expect truncation")
 	}
 }
 
 func TestScanDirectory_NonExistent(t *testing.T) {
 	patterns := DefaultSensitivePatterns()
-	_, err := patterns.ScanDirectory("/nonexistent/path/12345")
+	_, err := patterns.ScanDirectory(context.Background(), "/nonexistent/path/12345", ScanConfig{})
 	if err == nil {
 		t.Error("Expected error for non-existent directory")
+	}
+}
+
+func TestScanDirectory_MaxMatches(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create 20 matching files
+	for i := 0; i < 20; i++ {
+		filename := fmt.Sprintf("dump%d.sql", i)
+		if err := os.WriteFile(filepath.Join(tmpDir, filename), []byte("test"), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	patterns := DefaultSensitivePatterns()
+	config := ScanConfig{MaxMatches: 5}
+	result, err := patterns.ScanDirectory(context.Background(), tmpDir, config)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Matches) != 5 {
+		t.Errorf("Expected 5 matches, got %d", len(result.Matches))
+	}
+	if !result.Truncated {
+		t.Error("Expected Truncated=true")
+	}
+	if result.Reason != "max_matches" {
+		t.Errorf("Expected reason 'max_matches', got %s", result.Reason)
+	}
+}
+
+func TestScanDirectory_MaxEntries(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create 100 files (non-matching to test entry counting)
+	for i := 0; i < 100; i++ {
+		filename := fmt.Sprintf("file%d.txt", i)
+		if err := os.WriteFile(filepath.Join(tmpDir, filename), []byte("test"), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	patterns := DefaultSensitivePatterns()
+	config := ScanConfig{MaxEntries: 10}
+	result, err := patterns.ScanDirectory(context.Background(), tmpDir, config)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.Truncated {
+		t.Error("Expected Truncated=true")
+	}
+	if result.Reason != "max_entries" {
+		t.Errorf("Expected reason 'max_entries', got %s", result.Reason)
+	}
+}
+
+func TestScanDirectory_ContextCancelled(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create some files
+	for i := 0; i < 10; i++ {
+		filename := fmt.Sprintf("dump%d.sql", i)
+		if err := os.WriteFile(filepath.Join(tmpDir, filename), []byte("test"), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	patterns := DefaultSensitivePatterns()
+
+	// Pre-cancel the context
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	result, err := patterns.ScanDirectory(ctx, tmpDir, ScanConfig{})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.Truncated {
+		t.Error("Expected Truncated=true for cancelled context")
+	}
+	if result.Reason != "timeout" {
+		t.Errorf("Expected reason 'timeout', got %s", result.Reason)
+	}
+}
+
+func TestScanDirectory_Timeout(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create many files to ensure we hit the timeout
+	for i := 0; i < 1000; i++ {
+		filename := fmt.Sprintf("file%d.sql", i)
+		if err := os.WriteFile(filepath.Join(tmpDir, filename), []byte("test"), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	patterns := DefaultSensitivePatterns()
+	// Very short timeout - should truncate
+	config := ScanConfig{Timeout: 1 * time.Microsecond}
+
+	start := time.Now()
+	result, _ := patterns.ScanDirectory(context.Background(), tmpDir, config)
+	elapsed := time.Since(start)
+
+	// Should complete quickly (under 50ms even with the short timeout)
+	if elapsed > 50*time.Millisecond {
+		t.Errorf("Scan took too long: %v", elapsed)
+	}
+
+	// May or may not truncate depending on how fast the system is
+	// The main thing is it should complete quickly
+	t.Logf("Scan completed in %v, truncated=%v, reason=%s, matches=%d",
+		elapsed, result.Truncated, result.Reason, len(result.Matches))
+}
+
+func TestDefaultScanConfig(t *testing.T) {
+	config := DefaultScanConfig()
+
+	if config.MaxMatches != maxMatchesPerDir {
+		t.Errorf("Expected MaxMatches=%d, got %d", maxMatchesPerDir, config.MaxMatches)
+	}
+	if config.MaxEntries != maxEntriesPerDir {
+		t.Errorf("Expected MaxEntries=%d, got %d", maxEntriesPerDir, config.MaxEntries)
+	}
+	if config.Timeout != perDirTimeout {
+		t.Errorf("Expected Timeout=%v, got %v", perDirTimeout, config.Timeout)
 	}
 }
 

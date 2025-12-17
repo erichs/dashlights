@@ -2,10 +2,12 @@ package signals
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestDumpsterFireSignal_NoSensitiveFiles(t *testing.T) {
@@ -60,6 +62,18 @@ func TestDumpsterFireSignal_DetectsSQLFiles(t *testing.T) {
 	cwd, _ := os.Getwd()
 	if count := signal.GetCounts()[cwd]; count != 1 {
 		t.Errorf("Expected 1 SQL file in %s, got %d (detected=%v, counts=%v)", cwd, count, detected, signal.GetCounts())
+	}
+
+	// Test Diagnostic after detection (coverage for totalCount > 0 branch)
+	diag := signal.Diagnostic()
+	if !strings.Contains(diag, "sensitive file") {
+		t.Errorf("Expected diagnostic to mention sensitive files, got %q", diag)
+	}
+
+	// Test Remediation (coverage)
+	rem := signal.Remediation()
+	if rem == "" {
+		t.Error("Expected non-empty remediation")
 	}
 }
 
@@ -219,5 +233,80 @@ func TestDumpsterFireSignal_VerboseRemediationEmpty(t *testing.T) {
 	verbose := signal.VerboseRemediation()
 	if verbose != "" {
 		t.Errorf("Expected empty verbose remediation when no files found, got %q", verbose)
+	}
+}
+
+func TestDumpsterFireSignal_ContextCancellation(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create many sensitive files
+	for i := 0; i < 100; i++ {
+		filename := fmt.Sprintf("dump%d.sql", i)
+		if err := os.WriteFile(filepath.Join(tmpDir, filename), []byte("test"), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	origWd, _ := os.Getwd()
+	defer os.Chdir(origWd)
+	os.Chdir(tmpDir)
+
+	signal := NewDumpsterFireSignal()
+
+	// Pre-cancelled context
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	start := time.Now()
+	result := signal.Check(ctx)
+	elapsed := time.Since(start)
+
+	if result {
+		t.Error("Expected false when context is cancelled")
+	}
+	if elapsed > 10*time.Millisecond {
+		t.Errorf("Check took too long: %v (expected < 10ms)", elapsed)
+	}
+}
+
+func TestDumpsterFireSignal_PerformanceWithManyFiles(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping performance test in short mode")
+	}
+
+	tmpDir := t.TempDir()
+
+	// Create 500 sensitive files (pathological case)
+	for i := 0; i < 500; i++ {
+		filename := fmt.Sprintf("dump%d.sql", i)
+		if err := os.WriteFile(filepath.Join(tmpDir, filename), []byte("test"), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	origWd, _ := os.Getwd()
+	defer os.Chdir(origWd)
+	os.Chdir(tmpDir)
+
+	signal := NewDumpsterFireSignal()
+	ctx := context.Background()
+
+	start := time.Now()
+	signal.Check(ctx)
+	elapsed := time.Since(start)
+
+	// Should complete well under 10ms due to limits
+	if elapsed > 5*time.Millisecond {
+		t.Errorf("Check took too long: %v (expected < 5ms)", elapsed)
+	}
+
+	// Should have found some files but be limited by maxMatchesPerDir
+	if signal.TotalCount() == 0 {
+		t.Error("Expected to find some sensitive files")
+	}
+	// Max 10 per directory due to limits
+	cwd, _ := os.Getwd()
+	if signal.GetCounts()[cwd] > 10 {
+		t.Errorf("Expected max 10 matches per dir due to limits, got %d", signal.GetCounts()[cwd])
 	}
 }
