@@ -106,6 +106,13 @@ func (s *ZombieProcessesSignal) Check(ctx context.Context) bool {
 // checkWithFS performs the actual check using the provided filesystem interface
 // This is separated to allow for testing with mocked filesystems
 func (s *ZombieProcessesSignal) checkWithFS(ctx context.Context, fs procFS) bool {
+	// Check context cancellation before starting
+	select {
+	case <-ctx.Done():
+		return false
+	default:
+	}
+
 	// Read /proc/stat to count zombie processes
 	data, err := fs.ReadFile("/proc/stat")
 	if err != nil {

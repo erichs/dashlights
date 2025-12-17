@@ -2,6 +2,7 @@ package signals
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -68,6 +69,18 @@ func TestRottingSecretsSignal_OldFilesDetected(t *testing.T) {
 	// Oldest age should be at least 10 days
 	if signal.OldestAge() < 9*24*time.Hour {
 		t.Errorf("Expected oldest age >= 9 days, got %v", signal.OldestAge())
+	}
+
+	// Test Diagnostic after detection (coverage for count > 0 branch)
+	diag := signal.Diagnostic()
+	if !strings.Contains(diag, "sensitive file") {
+		t.Errorf("Expected diagnostic to mention sensitive files, got %q", diag)
+	}
+
+	// Test Remediation (coverage)
+	rem := signal.Remediation()
+	if rem == "" {
+		t.Error("Expected non-empty remediation")
 	}
 }
 
@@ -219,5 +232,85 @@ func TestRottingSecretsSignal_VerboseRemediationEmpty(t *testing.T) {
 	verbose := signal.VerboseRemediation()
 	if verbose != "" {
 		t.Errorf("Expected empty verbose remediation when no files found, got %q", verbose)
+	}
+}
+
+func TestRottingSecretsSignal_ContextCancellation(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create many old sensitive files
+	oldTime := time.Now().Add(-10 * 24 * time.Hour)
+	for i := 0; i < 100; i++ {
+		filename := fmt.Sprintf("dump%d.sql", i)
+		path := filepath.Join(tmpDir, filename)
+		if err := os.WriteFile(path, []byte("test"), 0644); err != nil {
+			t.Fatal(err)
+		}
+		os.Chtimes(path, oldTime, oldTime)
+	}
+
+	origWd, _ := os.Getwd()
+	defer os.Chdir(origWd)
+	os.Chdir(tmpDir)
+
+	signal := NewRottingSecretsSignal()
+
+	// Pre-cancelled context
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	start := time.Now()
+	result := signal.Check(ctx)
+	elapsed := time.Since(start)
+
+	if result {
+		t.Error("Expected false when context is cancelled")
+	}
+	if elapsed > 10*time.Millisecond {
+		t.Errorf("Check took too long: %v (expected < 10ms)", elapsed)
+	}
+}
+
+func TestRottingSecretsSignal_PerformanceWithManyFiles(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping performance test in short mode")
+	}
+
+	tmpDir := t.TempDir()
+
+	// Create 500 old sensitive files (pathological case)
+	oldTime := time.Now().Add(-10 * 24 * time.Hour)
+	for i := 0; i < 500; i++ {
+		filename := fmt.Sprintf("dump%d.sql", i)
+		path := filepath.Join(tmpDir, filename)
+		if err := os.WriteFile(path, []byte("test"), 0644); err != nil {
+			t.Fatal(err)
+		}
+		os.Chtimes(path, oldTime, oldTime)
+	}
+
+	origWd, _ := os.Getwd()
+	defer os.Chdir(origWd)
+	os.Chdir(tmpDir)
+
+	signal := NewRottingSecretsSignal()
+	ctx := context.Background()
+
+	start := time.Now()
+	signal.Check(ctx)
+	elapsed := time.Since(start)
+
+	// Should complete well under 100ms due to limits (relaxed for CI variability)
+	if elapsed > 50*time.Millisecond {
+		t.Errorf("Check took too long: %v (expected < 50ms)", elapsed)
+	}
+
+	// Should have found some files but be limited by maxMatchesPerDir
+	if signal.Count() == 0 {
+		t.Error("Expected to find some old sensitive files")
+	}
+	// Max 10 per directory due to limits
+	if signal.Count() > 10 {
+		t.Errorf("Expected max 10 matches per dir due to limits, got %d", signal.Count())
 	}
 }
