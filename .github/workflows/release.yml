@@ -64,13 +64,6 @@ jobs:
       - name: Install Syft
         uses: anchore/sbom-action/download-syft@43a17d6e7add2b5535efe4dcae9952337c479a93 # v0.20.11
 
-      - name: Generate Source SBOM
-        run: |
-          VERSION_NUM=${{ needs.check-release.outputs.tag_name }}
-          VERSION_NUM=${VERSION_NUM#v}
-          # Generate SBOM from source (includes go.mod dependencies)
-          syft dir:. --output "cyclonedx-json=dashlights_${VERSION_NUM}_source.sbom.json"
-
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6
         with:
@@ -80,12 +73,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload Source SBOM
+      - name: Generate and Upload Source SBOM
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           VERSION=${{ needs.check-release.outputs.tag_name }}
           VERSION_NUM=${VERSION#v}
+          # Generate SBOM from source (includes go.mod dependencies)
+          syft dir:. --output "cyclonedx-json=dashlights_${VERSION_NUM}_source.sbom.json"
           gh release upload "$VERSION" "dashlights_${VERSION_NUM}_source.sbom.json" --clobber
 
   # Build, sign, and notarize macOS binaries separately
