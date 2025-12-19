@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -14,6 +15,7 @@ import (
 	"time"
 
 	arg "github.com/alexflint/go-arg"
+	"github.com/erichs/dashlights/src/ruleoftwo"
 	"github.com/erichs/dashlights/src/signals"
 	"github.com/fatih/color"
 )
@@ -44,6 +46,7 @@ type cliArgs struct {
 	ListCustomMode  bool `arg:"-l,--list-custom,help:List supported color attributes and emoji aliases for custom lights."`
 	ClearCustomMode bool `arg:"-c,--clear-custom,help:Shell code to clear custom DASHLIGHT_ environment variables."`
 	DebugMode       bool `arg:"--debug,help:Debug mode: disable timeouts and show detailed execution timing."`
+	AgenticMode     bool `arg:"--agentic,help:Agentic mode for AI coding assistants (reads JSON from stdin)."`
 }
 
 // Version returns the version string for --version flag
@@ -70,6 +73,11 @@ func displayClearCodes(w io.Writer, lights *[]dashlight) {
 
 func main() {
 	arg.MustParse(&args)
+
+	// Agentic mode: completely different execution path for AI coding assistant hooks
+	if args.AgenticMode {
+		os.Exit(runAgenticMode())
+	}
 
 	startTime := time.Now()
 	var envParseStart, envParseEnd time.Time
@@ -448,6 +456,75 @@ func checkAllWithTiming(ctx context.Context, sigs []signals.Signal) ([]signals.R
 	}
 
 	return results, debugResults, true // All complete
+}
+
+// runAgenticMode handles the --agentic flag for AI coding assistant integration.
+// It reads a tool call JSON from stdin, performs Rule of Two analysis, and
+// outputs appropriate JSON/exit code for Claude Code's PreToolUse hook.
+func runAgenticMode() int {
+	// Check if disabled
+	if ruleoftwo.IsDisabled() {
+		// Output allow and exit
+		output := ruleoftwo.HookOutput{
+			HookSpecificOutput: &ruleoftwo.HookSpecificOutput{
+				HookEventName:            "PreToolUse",
+				PermissionDecision:       "allow",
+				PermissionDecisionReason: "Rule of Two: disabled",
+			},
+		}
+		jsonOut, err := json.Marshal(output)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error marshaling output: %v\n", err)
+			return 1
+		}
+		fmt.Println(string(jsonOut))
+		return 0
+	}
+
+	// Read JSON from stdin
+	input, err := io.ReadAll(os.Stdin)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error reading stdin: %v\n", err)
+		return 1
+	}
+
+	// Handle empty input gracefully
+	if len(input) == 0 {
+		fmt.Fprintln(os.Stderr, "Error: no input provided on stdin")
+		return 1
+	}
+
+	// Parse hook input
+	var hookInput ruleoftwo.HookInput
+	if err := json.Unmarshal(input, &hookInput); err != nil {
+		fmt.Fprintf(os.Stderr, "Error parsing JSON: %v\n", err)
+		return 1
+	}
+
+	// Analyze for Rule of Two violations
+	analyzer := ruleoftwo.NewAnalyzer()
+	result := analyzer.Analyze(&hookInput)
+
+	// Generate output
+	output, exitCode, stderrMsg := ruleoftwo.GenerateOutput(result)
+
+	if exitCode == 2 {
+		// Block action - write error to stderr
+		fmt.Fprintln(os.Stderr, stderrMsg)
+		return 2
+	}
+
+	// Output JSON to stdout
+	if output != nil {
+		jsonOut, err := json.Marshal(output)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error marshaling output: %v\n", err)
+			return 1
+		}
+		fmt.Println(string(jsonOut))
+	}
+
+	return 0
 }
 
 // displayDebugInfo outputs detailed debug information to stderr
