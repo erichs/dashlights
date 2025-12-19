@@ -501,6 +501,27 @@ func runAgenticMode() int {
 		return 1
 	}
 
+	// Check for critical threats BEFORE Rule of Two analysis
+	// These bypass the capability scoring and are handled immediately
+	if threat := ruleoftwo.DetectCriticalThreat(&hookInput); threat != nil {
+		output, exitCode, stderrMsg := ruleoftwo.GenerateThreatOutput(threat)
+
+		if exitCode == 2 {
+			fmt.Fprintln(os.Stderr, stderrMsg)
+			return 2
+		}
+
+		if output != nil {
+			jsonOut, err := json.Marshal(output)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error marshaling output: %v\n", err)
+				return 1
+			}
+			fmt.Println(string(jsonOut))
+		}
+		return exitCode
+	}
+
 	// Analyze for Rule of Two violations
 	analyzer := ruleoftwo.NewAnalyzer()
 	result := analyzer.Analyze(&hookInput)

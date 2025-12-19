@@ -72,6 +72,10 @@ var externalDataCommands = []string{
 	"svn update",
 	"hg clone",
 	"hg pull",
+	// Alternative downloaders
+	"aria2c",
+	"lynx -source",
+	"w3m -dump",
 }
 
 // obfuscationPatterns indicate encoded/obfuscated command execution.
@@ -80,6 +84,7 @@ var externalDataCommands = []string{
 var obfuscationPatterns = []string{
 	"base64 -d",
 	"base64 --decode",
+	"xxd -r",
 	"| bash",
 	"| sh",
 	"| zsh",
