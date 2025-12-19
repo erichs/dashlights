@@ -459,8 +459,8 @@ func checkAllWithTiming(ctx context.Context, sigs []signals.Signal) ([]signals.R
 }
 
 // runAgenticMode handles the --agentic flag for AI coding assistant integration.
-// It reads a tool call JSON from stdin, performs Rule of Two analysis, and
-// outputs appropriate JSON/exit code for Claude Code's PreToolUse hook.
+// It reads a tool call JSON from stdin, performs critical threat and Rule of Two
+// analysis, and outputs appropriate JSON/exit code for Claude Code's PreToolUse hook.
 func runAgenticMode() int {
 	// Check if disabled
 	if agentic.IsDisabled() {

@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"context"
+	"io"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -14,6 +16,62 @@ import (
 
 func typeof(v interface{}) string {
 	return reflect.TypeOf(v).String()
+}
+
+func captureRunAgenticMode(t *testing.T, stdin string) (int, string, string) {
+	t.Helper()
+
+	oldStdin := os.Stdin
+	oldStdout := os.Stdout
+	oldStderr := os.Stderr
+
+	stdinR, stdinW, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("Failed to create stdin pipe: %v", err)
+	}
+	if stdin != "" {
+		if _, err := stdinW.WriteString(stdin); err != nil {
+			t.Fatalf("Failed to write stdin: %v", err)
+		}
+	}
+	stdinW.Close()
+
+	stdoutR, stdoutW, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("Failed to create stdout pipe: %v", err)
+	}
+	stderrR, stderrW, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("Failed to create stderr pipe: %v", err)
+	}
+
+	os.Stdin = stdinR
+	os.Stdout = stdoutW
+	os.Stderr = stderrW
+
+	exitCode := runAgenticMode()
+
+	stdoutW.Close()
+	stderrW.Close()
+
+	stdoutBytes, err := io.ReadAll(stdoutR)
+	if err != nil {
+		t.Fatalf("Failed to read stdout: %v", err)
+	}
+	stderrBytes, err := io.ReadAll(stderrR)
+	if err != nil {
+		t.Fatalf("Failed to read stderr: %v", err)
+	}
+
+	stdinR.Close()
+	stdoutR.Close()
+	stderrR.Close()
+
+	os.Stdin = oldStdin
+	os.Stdout = oldStdout
+	os.Stderr = oldStderr
+
+	return exitCode, string(stdoutBytes), string(stderrBytes)
 }
 
 func TestDisplayCodes(t *testing.T) {
@@ -506,6 +564,16 @@ func (m *mockSignal) Emoji() string       { return "🔍" }
 func (m *mockSignal) Diagnostic() string  { return "Test diagnostic" }
 func (m *mockSignal) Remediation() string { return "Test remediation" }
 
+type panicSignal struct {
+	name string
+}
+
+func (p *panicSignal) Check(_ context.Context) bool { panic("boom") }
+func (p *panicSignal) Name() string                 { return p.name }
+func (p *panicSignal) Emoji() string                { return "💥" }
+func (p *panicSignal) Diagnostic() string           { return "Panic signal" }
+func (p *panicSignal) Remediation() string          { return "Handle panic" }
+
 func TestCheckAllWithTimingEmptySignals(t *testing.T) {
 	ctx := context.Background()
 	results, debugResults, completed := checkAllWithTiming(ctx, []signals.Signal{})
@@ -582,6 +650,27 @@ func TestCheckAllWithTimingTimeout(t *testing.T) {
 	}
 	if completed {
 		t.Error("Expected completed to be false due to timeout")
+	}
+}
+
+func TestCheckAllWithTimingPanicRecovery(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+
+	sigs := []signals.Signal{
+		&panicSignal{name: "PanicSignal"},
+	}
+
+	results, debugResults, completed := checkAllWithTiming(ctx, sigs)
+
+	if !completed {
+		t.Error("Expected completed to be true even with panic recovery")
+	}
+	if len(results) != 1 || len(debugResults) != 1 {
+		t.Fatalf("Expected 1 result/debug result, got %d/%d", len(results), len(debugResults))
+	}
+	if results[0].Signal == nil || results[0].Signal.Name() != "PanicSignal" {
+		t.Errorf("Expected recovered signal to be present, got %+v", results[0].Signal)
 	}
 }
 
@@ -765,5 +854,94 @@ func TestDisplaySignalDiagnosticsEmptyVerboseRemediation(t *testing.T) {
 	// Should NOT contain the verbose remediation prefix when empty
 	if strings.Contains(output, "🔧 \n") {
 		t.Errorf("Should not show empty verbose remediation in:\n%s", output)
+	}
+}
+
+func TestRunAgenticModeDisabled(t *testing.T) {
+	t.Setenv("DASHLIGHTS_DISABLE_AGENTIC", "1")
+
+	exitCode, stdout, stderr := captureRunAgenticMode(t, "")
+
+	if exitCode != 0 {
+		t.Errorf("Expected exit code 0, got %d", exitCode)
+	}
+	if stderr != "" {
+		t.Errorf("Expected empty stderr, got %q", stderr)
+	}
+	if !strings.Contains(stdout, "\"permissionDecision\":\"allow\"") {
+		t.Errorf("Expected allow decision in stdout, got: %s", stdout)
+	}
+	if !strings.Contains(stdout, "Rule of Two: disabled") {
+		t.Errorf("Expected disabled reason in stdout, got: %s", stdout)
+	}
+}
+
+func TestRunAgenticModeEmptyInput(t *testing.T) {
+	t.Setenv("DASHLIGHTS_DISABLE_AGENTIC", "")
+
+	exitCode, stdout, stderr := captureRunAgenticMode(t, "")
+
+	if exitCode != 1 {
+		t.Errorf("Expected exit code 1, got %d", exitCode)
+	}
+	if stdout != "" {
+		t.Errorf("Expected empty stdout, got %q", stdout)
+	}
+	if !strings.Contains(stderr, "no input provided") {
+		t.Errorf("Expected no input error, got: %s", stderr)
+	}
+}
+
+func TestRunAgenticModeInvalidJSON(t *testing.T) {
+	t.Setenv("DASHLIGHTS_DISABLE_AGENTIC", "")
+
+	exitCode, stdout, stderr := captureRunAgenticMode(t, "{bad")
+
+	if exitCode != 1 {
+		t.Errorf("Expected exit code 1, got %d", exitCode)
+	}
+	if stdout != "" {
+		t.Errorf("Expected empty stdout, got %q", stdout)
+	}
+	if !strings.Contains(stderr, "Error parsing JSON") {
+		t.Errorf("Expected JSON parsing error, got: %s", stderr)
+	}
+}
+
+func TestRunAgenticModeCriticalThreatBlock(t *testing.T) {
+	t.Setenv("DASHLIGHTS_DISABLE_AGENTIC", "")
+
+	input := `{"tool_name":"Write","tool_input":{"file_path":"CLAUDE.md","content":"x"}}`
+	exitCode, stdout, stderr := captureRunAgenticMode(t, input)
+
+	if exitCode != 2 {
+		t.Errorf("Expected exit code 2, got %d", exitCode)
+	}
+	if stdout != "" {
+		t.Errorf("Expected empty stdout, got %q", stdout)
+	}
+	if !strings.Contains(stderr, "Blocked: Attempted write to Claude agent configuration") {
+		t.Errorf("Expected blocked message, got: %s", stderr)
+	}
+}
+
+func TestRunAgenticModeCriticalThreatAsk(t *testing.T) {
+	t.Setenv("DASHLIGHTS_DISABLE_AGENTIC", "")
+	t.Setenv("DASHLIGHTS_AGENTIC_MODE", "ask")
+
+	input := "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"echo \\u200B\"}}"
+	exitCode, stdout, stderr := captureRunAgenticMode(t, input)
+
+	if exitCode != 0 {
+		t.Errorf("Expected exit code 0, got %d", exitCode)
+	}
+	if stderr != "" {
+		t.Errorf("Expected empty stderr, got %q", stderr)
+	}
+	if !strings.Contains(stdout, "\"permissionDecision\":\"ask\"") {
+		t.Errorf("Expected ask decision in stdout, got: %s", stdout)
+	}
+	if !strings.Contains(stdout, "Invisible Unicode detected") {
+		t.Errorf("Expected invisible unicode reason, got: %s", stdout)
 	}
 }
