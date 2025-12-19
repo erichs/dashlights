@@ -7,7 +7,7 @@
 </td>
 <td style="border: none;">
 
-> A fast, security-focused "check engine light" for your prompt!
+> A fast, security-focused "check engine light" for your terminal!
 
 [![CI](https://github.com/erichs/dashlights/actions/workflows/ci.yml/badge.svg)](https://github.com/erichs/dashlights/actions/workflows/ci.yml)
 [![Security](https://github.com/erichs/dashlights/actions/workflows/security.yml/badge.svg)](https://github.com/erichs/dashlights/actions/workflows/security.yml)
@@ -21,7 +21,7 @@
 </tr>
 </table>
 
-[What?](#what-does-this-do) | [Why?](#why-is-this-needed) | [Install](#how-to-install) | [Configure](#configure-your-prompt) | [Usage](#usage) | [Performance](#performance) | [Security](#security)
+[What?](#what-does-this-do) | [Why?](#why-is-this-needed) | [Install](#how-to-install) | [Configure](#configure-your-prompt) | [Usage](#usage) | [Agentic](#agentic-mode) | [Performance](#performance) | [Security](#security)
 
 ## What does this do?
 
@@ -305,6 +305,20 @@ $ dashlights
 ```
 
 Any environment variable of the form `DASHLIGHT_{name}_{utf8hex}` will be displayed as a custom indicator.
+
+## Agentic Mode
+
+Dashlights includes an `--agentic` mode for AI coding assistants like Claude Code. It analyzes tool calls before execution to detect:
+
+- **Critical threats**: Writes to agent config files, invisible Unicode characters
+- **Rule of Two violations**: Actions combining untrusted input + sensitive access + state changes
+
+```bash
+# Add to .claude/settings.json hooks
+"command": "dashlights --agentic"
+```
+
+👉 **[View the complete agentic mode documentation →](docs/agentic_mode.md)**
 
 ## Performance
 
