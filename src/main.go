@@ -313,7 +313,10 @@ func displayDiagnostics(w io.Writer, lights *[]dashlight) {
 }
 
 func parseDashlightFromEnv(lights *[]dashlight, env string) {
-	kv := strings.Split(env, "=")
+	kv := strings.SplitN(env, "=", 2)
+	if len(kv) < 2 {
+		return
+	}
 	dashvar := kv[0]
 	diagnostic := kv[1]
 	if strings.Contains(dashvar, "DASHLIGHT_") {
@@ -462,6 +465,8 @@ func checkAllWithTiming(ctx context.Context, sigs []signals.Signal) ([]signals.R
 // It reads a tool call JSON from stdin, performs critical threat and Rule of Two
 // analysis, and outputs appropriate JSON/exit code for Claude Code's PreToolUse hook.
 func runAgenticMode() int {
+	const maxAgenticInputBytes = 1 * 1024 * 1024
+
 	// Check if disabled
 	if agentic.IsDisabled() {
 		// Output allow and exit
@@ -482,9 +487,13 @@ func runAgenticMode() int {
 	}
 
 	// Read JSON from stdin
-	input, err := io.ReadAll(os.Stdin)
+	input, err := io.ReadAll(io.LimitReader(os.Stdin, maxAgenticInputBytes+1))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error reading stdin: %v\n", err)
+		return 1
+	}
+	if len(input) > maxAgenticInputBytes {
+		fmt.Fprintf(os.Stderr, "Error: input exceeds %d bytes\n", maxAgenticInputBytes)
 		return 1
 	}
 

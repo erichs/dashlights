@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/erichs/dashlights/src/signals/internal/fileutil"
 )
 
 // SnapshotDependencySignal checks for SNAPSHOT dependencies on release branches
@@ -14,6 +16,11 @@ type SnapshotDependencySignal struct {
 	foundSnapshot string
 	fileType      string
 }
+
+const (
+	maxGitRefBytes    = 1024
+	maxBuildFileBytes = 512 * 1024
+)
 
 // NewSnapshotDependencySignal creates a SnapshotDependencySignal.
 func NewSnapshotDependencySignal() Signal {
@@ -109,12 +116,12 @@ func isReleaseContext(ctx context.Context) bool {
 // getCurrentHeadSHA reads the current HEAD SHA from .git/HEAD
 func getCurrentHeadSHA() (string, error) {
 	// Read .git/HEAD
-	headContent, err := os.ReadFile(".git/HEAD")
+	headContent, err := fileutil.ReadFileLimitedString(".git/HEAD", maxGitRefBytes)
 	if err != nil {
 		return "", err
 	}
 
-	headStr := strings.TrimSpace(string(headContent))
+	headStr := strings.TrimSpace(headContent)
 
 	// If HEAD is a direct SHA (detached HEAD)
 	if !strings.HasPrefix(headStr, "ref:") {
@@ -142,22 +149,22 @@ func getCurrentHeadSHA() (string, error) {
 	// Final validation: clean the full path
 	refPath = filepath.Clean(refPath)
 
-	shaContent, err := os.ReadFile(refPath)
+	shaContent, err := fileutil.ReadFileLimitedString(refPath, maxGitRefBytes)
 	if err != nil {
 		return "", err
 	}
 
-	return strings.TrimSpace(string(shaContent)), nil
+	return strings.TrimSpace(shaContent), nil
 }
 
 // getCurrentBranch reads the current branch name from .git/HEAD
 func getCurrentBranch() (string, error) {
-	headContent, err := os.ReadFile(".git/HEAD")
+	headContent, err := fileutil.ReadFileLimitedString(".git/HEAD", maxGitRefBytes)
 	if err != nil {
 		return "", err
 	}
 
-	headStr := strings.TrimSpace(string(headContent))
+	headStr := strings.TrimSpace(headContent)
 
 	// If HEAD is detached, return empty
 	if !strings.HasPrefix(headStr, "ref:") {
@@ -214,12 +221,12 @@ func isHeadOnTag(ctx context.Context, headSHA string) bool {
 		// Final validation: clean the full path
 		tagPath = filepath.Clean(tagPath)
 
-		tagSHA, err := os.ReadFile(tagPath)
+		tagSHA, err := fileutil.ReadFileLimitedString(tagPath, maxGitRefBytes)
 		if err != nil {
 			continue
 		}
 
-		if strings.TrimSpace(string(tagSHA)) == headSHA {
+		if strings.TrimSpace(tagSHA) == headSHA {
 			return true
 		}
 	}
@@ -238,13 +245,12 @@ func hasBuildGradle() bool {
 }
 
 func (s *SnapshotDependencySignal) checkPomXML() bool {
-	file, err := os.Open("pom.xml")
+	data, err := fileutil.ReadFileLimitedString("pom.xml", maxBuildFileBytes)
 	if err != nil {
 		return false
 	}
-	defer file.Close()
 
-	scanner := bufio.NewScanner(file)
+	scanner := bufio.NewScanner(strings.NewReader(data))
 	for scanner.Scan() {
 		line := scanner.Text()
 		if strings.Contains(line, "SNAPSHOT") && strings.Contains(line, "<version>") {
@@ -257,13 +263,12 @@ func (s *SnapshotDependencySignal) checkPomXML() bool {
 }
 
 func (s *SnapshotDependencySignal) checkBuildGradle() bool {
-	file, err := os.Open("build.gradle")
+	data, err := fileutil.ReadFileLimitedString("build.gradle", maxBuildFileBytes)
 	if err != nil {
 		return false
 	}
-	defer file.Close()
 
-	scanner := bufio.NewScanner(file)
+	scanner := bufio.NewScanner(strings.NewReader(data))
 	for scanner.Scan() {
 		line := scanner.Text()
 		// Look for SNAPSHOT in dependency declarations
