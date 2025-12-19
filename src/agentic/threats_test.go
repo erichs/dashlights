@@ -1,4 +1,4 @@
-package ruleoftwo
+package agentic
 
 import (
 	"os"

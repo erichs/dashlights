@@ -1,8 +1,9 @@
-// Package ruleoftwo provides Rule of Two analysis for agentic AI coding assistants.
-// It analyzes tool calls to detect potential security violations where an action
+// Package agentic provides security analysis for AI coding assistants.
+// It detects critical threats (config writes, invisible unicode) and performs
+// Rule of Two analysis to detect potential security violations where an action
 // combines more than two of: [A] untrustworthy inputs, [B] sensitive access,
 // [C] state changes or external communication.
-package ruleoftwo
+package agentic
 
 // HookInput represents the JSON input from Claude Code PreToolUse hook.
 // This structure matches the JSON schema provided by Claude Code's hook system.

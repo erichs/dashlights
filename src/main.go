@@ -15,7 +15,7 @@ import (
 	"time"
 
 	arg "github.com/alexflint/go-arg"
-	"github.com/erichs/dashlights/src/ruleoftwo"
+	"github.com/erichs/dashlights/src/agentic"
 	"github.com/erichs/dashlights/src/signals"
 	"github.com/fatih/color"
 )
@@ -463,10 +463,10 @@ func checkAllWithTiming(ctx context.Context, sigs []signals.Signal) ([]signals.R
 // outputs appropriate JSON/exit code for Claude Code's PreToolUse hook.
 func runAgenticMode() int {
 	// Check if disabled
-	if ruleoftwo.IsDisabled() {
+	if agentic.IsDisabled() {
 		// Output allow and exit
-		output := ruleoftwo.HookOutput{
-			HookSpecificOutput: &ruleoftwo.HookSpecificOutput{
+		output := agentic.HookOutput{
+			HookSpecificOutput: &agentic.HookSpecificOutput{
 				HookEventName:            "PreToolUse",
 				PermissionDecision:       "allow",
 				PermissionDecisionReason: "Rule of Two: disabled",
@@ -495,7 +495,7 @@ func runAgenticMode() int {
 	}
 
 	// Parse hook input
-	var hookInput ruleoftwo.HookInput
+	var hookInput agentic.HookInput
 	if err := json.Unmarshal(input, &hookInput); err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing JSON: %v\n", err)
 		return 1
@@ -503,8 +503,8 @@ func runAgenticMode() int {
 
 	// Check for critical threats BEFORE Rule of Two analysis
 	// These bypass the capability scoring and are handled immediately
-	if threat := ruleoftwo.DetectCriticalThreat(&hookInput); threat != nil {
-		output, exitCode, stderrMsg := ruleoftwo.GenerateThreatOutput(threat)
+	if threat := agentic.DetectCriticalThreat(&hookInput); threat != nil {
+		output, exitCode, stderrMsg := agentic.GenerateThreatOutput(threat)
 
 		if exitCode == 2 {
 			fmt.Fprintln(os.Stderr, stderrMsg)
@@ -523,11 +523,11 @@ func runAgenticMode() int {
 	}
 
 	// Analyze for Rule of Two violations
-	analyzer := ruleoftwo.NewAnalyzer()
+	analyzer := agentic.NewAnalyzer()
 	result := analyzer.Analyze(&hookInput)
 
 	// Generate output
-	output, exitCode, stderrMsg := ruleoftwo.GenerateOutput(result)
+	output, exitCode, stderrMsg := agentic.GenerateOutput(result)
 
 	if exitCode == 2 {
 		// Block action - write error to stderr
