@@ -80,37 +80,226 @@ func DetectCriticalThreat(input *HookInput) *CriticalThreat {
 
 // detectClaudeConfigWrite checks if the tool call attempts to write to Claude config.
 func detectClaudeConfigWrite(input *HookInput) *CriticalThreat {
-	var targetPath string
+	var targetPaths []string
 
 	switch input.ToolName {
 	case "Write":
 		parsed := ParseWriteInput(input.ToolInput)
-		targetPath = parsed.FilePath
+		if parsed.FilePath != "" {
+			targetPaths = append(targetPaths, parsed.FilePath)
+		}
 	case "Edit":
 		parsed := ParseEditInput(input.ToolInput)
-		targetPath = parsed.FilePath
+		if parsed.FilePath != "" {
+			targetPaths = append(targetPaths, parsed.FilePath)
+		}
+	case "Bash":
+		parsed := ParseBashInput(input.ToolInput)
+		targetPaths = append(targetPaths, extractBashWriteTargets(parsed.Command)...)
 	default:
 		return nil
 	}
 
-	if targetPath == "" {
+	if len(targetPaths) == 0 {
 		return nil
 	}
 
-	// Normalize path for comparison
-	normalizedPath := normalizePath(targetPath)
+	for _, targetPath := range targetPaths {
+		if targetPath == "" {
+			continue
+		}
+		// Normalize path for comparison
+		normalizedPath := normalizePath(cleanBashPathToken(targetPath))
 
-	for _, configPath := range claudeConfigPaths {
-		if matchesClaudeConfigPath(normalizedPath, configPath) {
-			return &CriticalThreat{
-				Type:         "claude_config_write",
-				Details:      fmt.Sprintf("Write to %s", targetPath),
-				AllowAskMode: false, // Always block
+		for _, configPath := range claudeConfigPaths {
+			if matchesClaudeConfigPath(normalizedPath, configPath) {
+				return &CriticalThreat{
+					Type:         "claude_config_write",
+					Details:      fmt.Sprintf("Write to %s", targetPath),
+					AllowAskMode: false, // Always block
+				}
 			}
 		}
 	}
 
 	return nil
+}
+
+// extractBashWriteTargets pulls likely file write targets from a Bash command.
+// This is a heuristic that looks for redirects and tee targets.
+func extractBashWriteTargets(command string) []string {
+	if command == "" {
+		return nil
+	}
+
+	tokens := tokenizeBashCommand(command)
+	if len(tokens) == 0 {
+		return nil
+	}
+
+	var targets []string
+
+	for i := 0; i < len(tokens); i++ {
+		tok := tokens[i]
+
+		if target := extractRedirectionTarget(tok, tokens, i); target != "" {
+			targets = append(targets, target)
+		}
+
+		if isTeeCommand(tok) {
+			teeTargets := extractTeeTargets(tokens[i+1:])
+			if len(teeTargets) > 0 {
+				targets = append(targets, teeTargets...)
+			}
+		}
+	}
+
+	return targets
+}
+
+func extractRedirectionTarget(tok string, tokens []string, idx int) string {
+	if tok == "" {
+		return ""
+	}
+
+	// Exact operator tokens.
+	if isRedirectionOperator(tok) {
+		if idx+1 >= len(tokens) {
+			return ""
+		}
+		next := cleanBashPathToken(tokens[idx+1])
+		if strings.HasPrefix(next, "&") {
+			return ""
+		}
+		return next
+	}
+
+	// Operator with attached path (e.g., >file, 2>/tmp/out).
+	for _, prefix := range redirectionPrefixes() {
+		if strings.HasPrefix(tok, prefix) && len(tok) > len(prefix) {
+			return cleanBashPathToken(tok[len(prefix):])
+		}
+	}
+
+	return ""
+}
+
+func redirectionPrefixes() []string {
+	return []string{"&>>", "&>", "2>>", "2>", "1>>", "1>", ">>", ">"}
+}
+
+func isRedirectionOperator(tok string) bool {
+	switch tok {
+	case ">", ">>", "1>", "1>>", "2>", "2>>", "&>", "&>>":
+		return true
+	default:
+		return false
+	}
+}
+
+func isTeeCommand(tok string) bool {
+	if tok == "" {
+		return false
+	}
+	return filepath.Base(tok) == "tee"
+}
+
+func extractTeeTargets(tokens []string) []string {
+	var targets []string
+
+	for _, tok := range tokens {
+		if tok == "|" || tok == "||" || tok == "&&" || tok == ";" {
+			break
+		}
+		if strings.HasPrefix(tok, "-") {
+			continue
+		}
+		target := cleanBashPathToken(tok)
+		if target != "" {
+			targets = append(targets, target)
+		}
+	}
+
+	return targets
+}
+
+// tokenizeBashCommand is a lightweight tokenizer that respects quotes and pipes.
+func tokenizeBashCommand(command string) []string {
+	var tokens []string
+	var current strings.Builder
+	inSingle := false
+	inDouble := false
+	escaped := false
+
+	for _, r := range command {
+		if escaped {
+			current.WriteRune(r)
+			escaped = false
+			continue
+		}
+
+		if r == '\\' && !inSingle {
+			escaped = true
+			continue
+		}
+
+		if r == '\'' && !inDouble {
+			inSingle = !inSingle
+			current.WriteRune(r)
+			continue
+		}
+
+		if r == '"' && !inSingle {
+			inDouble = !inDouble
+			current.WriteRune(r)
+			continue
+		}
+
+		if !inSingle && !inDouble {
+			if r == '|' || r == ';' {
+				if current.Len() > 0 {
+					tokens = append(tokens, current.String())
+					current.Reset()
+				}
+				tokens = append(tokens, string(r))
+				continue
+			}
+			if r == ' ' || r == '\t' || r == '\n' || r == '\r' {
+				if current.Len() > 0 {
+					tokens = append(tokens, current.String())
+					current.Reset()
+				}
+				continue
+			}
+		}
+
+		current.WriteRune(r)
+	}
+
+	if current.Len() > 0 {
+		tokens = append(tokens, current.String())
+	}
+
+	return tokens
+}
+
+// cleanBashPathToken trims quotes and common shell separators from a token.
+func cleanBashPathToken(token string) string {
+	token = strings.TrimSpace(token)
+	if token == "" {
+		return ""
+	}
+
+	if len(token) >= 2 {
+		if token[0] == '\'' && token[len(token)-1] == '\'' {
+			token = token[1 : len(token)-1]
+		} else if token[0] == '"' && token[len(token)-1] == '"' {
+			token = token[1 : len(token)-1]
+		}
+	}
+
+	token = strings.TrimRight(token, ";|&")
+	return token
 }
 
 // matchesClaudeConfigPath checks if a path matches a Claude config pattern.
