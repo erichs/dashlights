@@ -2,6 +2,7 @@ package agentic
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"unicode"
@@ -10,10 +11,10 @@ import (
 // CriticalThreat represents a security threat that bypasses Rule of Two scoring.
 // These are threats that warrant immediate blocking regardless of capability count.
 type CriticalThreat struct {
-	Type    string // "claude_config_write", "invisible_unicode"
+	Type    string // "agent_config_write", "invisible_unicode"
 	Details string
 	// AllowAskMode indicates whether DASHLIGHTS_AGENTIC_MODE=ask should prompt
-	// instead of blocking. Claude config writes always block (false).
+	// instead of blocking. Agent config writes always block (false).
 	AllowAskMode bool
 }
 
@@ -56,17 +57,39 @@ var invisibleUnicodeRanges = []invisibleUnicodeRange{
 	{"Tag characters", 0xE0000, 0xE007F},
 }
 
-// claudeConfigPaths lists paths that should never be written to by an agent.
-var claudeConfigPaths = []string{
-	".claude/",
+// agentConfigPaths lists paths that should never be written to by any agent.
+// These are configuration files that could hijack agent behavior.
+var agentConfigPaths = []string{
+	// Claude Code config
+	".claude/settings.json",
+	".claude/settings.local.json",
+	".claude/commands/", // Custom slash commands
 	"CLAUDE.md",
+
+	// Cursor config (project-level)
+	".cursor/hooks.json",
+	".cursor/rules",
+}
+
+// agentConfigHomePaths are config files relative to user home directory.
+// These are matched against absolute paths after expanding ~.
+var agentConfigHomePaths = []string{
+	".cursor/cli-config.json",
+	".cursor/hooks.json",
+}
+
+// agentConfigSafeSubdirs are subdirectories within .claude/ that are safe to write.
+// These are working directories, not configuration files.
+var agentConfigSafeSubdirs = []string{
+	".claude/plans/",
+	".claude/todos/",
 }
 
 // DetectCriticalThreat checks for threats that bypass Rule of Two scoring.
 // Returns nil if no critical threat is detected.
 func DetectCriticalThreat(input *HookInput) *CriticalThreat {
-	// Check Claude config writes first (always block, no ask mode)
-	if threat := detectClaudeConfigWrite(input); threat != nil {
+	// Check agent config writes first (always block, no ask mode)
+	if threat := detectAgentConfigWrite(input); threat != nil {
 		return threat
 	}
 
@@ -78,8 +101,8 @@ func DetectCriticalThreat(input *HookInput) *CriticalThreat {
 	return nil
 }
 
-// detectClaudeConfigWrite checks if the tool call attempts to write to Claude config.
-func detectClaudeConfigWrite(input *HookInput) *CriticalThreat {
+// detectAgentConfigWrite checks if the tool call attempts to write to agent config.
+func detectAgentConfigWrite(input *HookInput) *CriticalThreat {
 	var targetPaths []string
 
 	switch input.ToolName {
@@ -111,18 +134,68 @@ func detectClaudeConfigWrite(input *HookInput) *CriticalThreat {
 		// Normalize path for comparison
 		normalizedPath := normalizePath(cleanBashPathToken(targetPath))
 
-		for _, configPath := range claudeConfigPaths {
-			if matchesClaudeConfigPath(normalizedPath, configPath) {
+		// Check if path is in a safe subdirectory first
+		if isInSafeSubdir(normalizedPath) {
+			continue
+		}
+
+		// Check project-level config paths
+		for _, configPath := range agentConfigPaths {
+			if matchesAgentConfigPath(normalizedPath, configPath) {
 				return &CriticalThreat{
-					Type:         "claude_config_write",
+					Type:         "agent_config_write",
 					Details:      fmt.Sprintf("Write to %s", targetPath),
 					AllowAskMode: false, // Always block
 				}
 			}
 		}
+
+		// Check home directory config paths
+		if matchesHomeConfigPath(normalizedPath) {
+			return &CriticalThreat{
+				Type:         "agent_config_write",
+				Details:      fmt.Sprintf("Write to %s", targetPath),
+				AllowAskMode: false, // Always block
+			}
+		}
 	}
 
 	return nil
+}
+
+// isInSafeSubdir checks if a path is within a safe subdirectory.
+func isInSafeSubdir(path string) bool {
+	for _, safeDir := range agentConfigSafeSubdirs {
+		dir := strings.TrimSuffix(safeDir, "/")
+		// Check if path is in the safe directory
+		if strings.HasPrefix(path, safeDir) ||
+			strings.Contains(path, "/"+safeDir) ||
+			strings.Contains(path, "/"+dir+"/") {
+			return true
+		}
+	}
+	return false
+}
+
+// matchesHomeConfigPath checks if an absolute path matches a home directory config.
+func matchesHomeConfigPath(path string) bool {
+	// Only check absolute paths
+	if !filepath.IsAbs(path) {
+		return false
+	}
+
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return false
+	}
+
+	for _, configPath := range agentConfigHomePaths {
+		fullPath := filepath.Join(homeDir, configPath)
+		if path == fullPath || path == filepath.Clean(fullPath) {
+			return true
+		}
+	}
+	return false
 }
 
 // extractBashWriteTargets pulls likely file write targets from a Bash command.
@@ -302,8 +375,8 @@ func cleanBashPathToken(token string) string {
 	return token
 }
 
-// matchesClaudeConfigPath checks if a path matches a Claude config pattern.
-func matchesClaudeConfigPath(path, pattern string) bool {
+// matchesAgentConfigPath checks if a path matches an agent config pattern.
+func matchesAgentConfigPath(path, pattern string) bool {
 	// Handle directory patterns (ending with /)
 	if strings.HasSuffix(pattern, "/") {
 		dir := strings.TrimSuffix(pattern, "/")
@@ -479,10 +552,10 @@ func GenerateThreatOutput(threat *CriticalThreat) (*HookOutput, int, string) {
 	mode := GetAgenticMode()
 
 	switch threat.Type {
-	case "claude_config_write":
+	case "agent_config_write":
 		// Always block, never ask
 		stderrMsg := fmt.Sprintf(
-			"Blocked: Attempted write to Claude agent configuration. %s",
+			"Blocked: Attempted write to agent configuration. %s",
 			threat.Details)
 		return nil, 2, stderrMsg
 

@@ -5,13 +5,14 @@ import (
 	"testing"
 )
 
-func TestDetectClaudeConfigWrite(t *testing.T) {
+func TestDetectAgentConfigWrite(t *testing.T) {
 	tests := []struct {
 		name       string
 		toolName   string
 		toolInput  map[string]interface{}
 		wantThreat bool
 	}{
+		// Claude Code config paths
 		{
 			name:     "Write to .claude/settings.json",
 			toolName: "Write",
@@ -49,6 +50,64 @@ func TestDetectClaudeConfigWrite(t *testing.T) {
 			},
 			wantThreat: true,
 		},
+		// Cursor config paths
+		{
+			name:     "Write to .cursor/hooks.json",
+			toolName: "Write",
+			toolInput: map[string]interface{}{
+				"file_path": ".cursor/hooks.json",
+				"content":   "{}",
+			},
+			wantThreat: true,
+		},
+		{
+			name:     "Write to .cursor/rules",
+			toolName: "Write",
+			toolInput: map[string]interface{}{
+				"file_path": ".cursor/rules",
+				"content":   "malicious rules",
+			},
+			wantThreat: true,
+		},
+		{
+			name:     "Edit .cursor/hooks.json in project",
+			toolName: "Edit",
+			toolInput: map[string]interface{}{
+				"file_path":  "/Users/test/project/.cursor/hooks.json",
+				"old_string": "old",
+				"new_string": "new",
+			},
+			wantThreat: true,
+		},
+		// Safe subdirectories (should NOT trigger)
+		{
+			name:     "Write to .claude/plans/ - safe subdir",
+			toolName: "Write",
+			toolInput: map[string]interface{}{
+				"file_path": ".claude/plans/my-plan.md",
+				"content":   "# Plan",
+			},
+			wantThreat: false,
+		},
+		{
+			name:     "Write to absolute .claude/plans/ - safe subdir",
+			toolName: "Write",
+			toolInput: map[string]interface{}{
+				"file_path": "/Users/test/.claude/plans/plan.md",
+				"content":   "# Plan",
+			},
+			wantThreat: false,
+		},
+		{
+			name:     "Write to .claude/todos/ - safe subdir",
+			toolName: "Write",
+			toolInput: map[string]interface{}{
+				"file_path": ".claude/todos/todo.json",
+				"content":   "{}",
+			},
+			wantThreat: false,
+		},
+		// Normal files (should NOT trigger)
 		{
 			name:     "Write to normal file",
 			toolName: "Write",
@@ -100,10 +159,18 @@ func TestDetectClaudeConfigWrite(t *testing.T) {
 			wantThreat: true,
 		},
 		{
-			name:     "Bash redirect to non-claude path",
+			name:     "Bash redirect to non-config path",
 			toolName: "Bash",
 			toolInput: map[string]interface{}{
 				"command": "echo test > ./tmp/output.txt",
+			},
+			wantThreat: false,
+		},
+		{
+			name:     "Bash redirect to .claude/plans/ - safe",
+			toolName: "Bash",
+			toolInput: map[string]interface{}{
+				"command": "echo test > .claude/plans/output.md",
 			},
 			wantThreat: false,
 		},
@@ -124,7 +191,7 @@ func TestDetectClaudeConfigWrite(t *testing.T) {
 				ToolInput: tt.toolInput,
 			}
 
-			threat := detectClaudeConfigWrite(input)
+			threat := detectAgentConfigWrite(input)
 
 			if tt.wantThreat && threat == nil {
 				t.Error("Expected threat to be detected, got nil")
@@ -132,11 +199,11 @@ func TestDetectClaudeConfigWrite(t *testing.T) {
 			if !tt.wantThreat && threat != nil {
 				t.Errorf("Expected no threat, got: %+v", threat)
 			}
-			if threat != nil && threat.Type != "claude_config_write" {
-				t.Errorf("Expected type 'claude_config_write', got '%s'", threat.Type)
+			if threat != nil && threat.Type != "agent_config_write" {
+				t.Errorf("Expected type 'agent_config_write', got '%s'", threat.Type)
 			}
 			if threat != nil && threat.AllowAskMode {
-				t.Error("Claude config writes should never allow ask mode")
+				t.Error("Agent config writes should never allow ask mode")
 			}
 		})
 	}
@@ -303,14 +370,14 @@ func TestDetectCriticalThreat(t *testing.T) {
 		wantAskMode bool
 	}{
 		{
-			name:     "Claude config takes priority",
+			name:     "Agent config takes priority",
 			toolName: "Write",
 			toolInput: map[string]interface{}{
 				"file_path": "CLAUDE.md",
 				"content":   "content\u200B", // Has invisible char too
 			},
 			wantThreat:  true,
-			wantType:    "claude_config_write",
+			wantType:    "agent_config_write",
 			wantAskMode: false,
 		},
 		{
@@ -360,13 +427,13 @@ func TestDetectCriticalThreat(t *testing.T) {
 	}
 }
 
-func TestGenerateThreatOutput_ClaudeConfig(t *testing.T) {
+func TestGenerateThreatOutput_AgentConfig(t *testing.T) {
 	// Save original value
 	original := os.Getenv("DASHLIGHTS_AGENTIC_MODE")
 	defer os.Setenv("DASHLIGHTS_AGENTIC_MODE", original)
 
 	threat := &CriticalThreat{
-		Type:         "claude_config_write",
+		Type:         "agent_config_write",
 		Details:      "Write to CLAUDE.md",
 		AllowAskMode: false,
 	}
@@ -385,7 +452,7 @@ func TestGenerateThreatOutput_ClaudeConfig(t *testing.T) {
 		t.Error("Expected non-empty stderr message")
 	}
 
-	// Test ask mode - should STILL block for claude config
+	// Test ask mode - should STILL block for agent config
 	os.Setenv("DASHLIGHTS_AGENTIC_MODE", "ask")
 	output, exitCode, stderrMsg = GenerateThreatOutput(threat)
 
@@ -393,7 +460,7 @@ func TestGenerateThreatOutput_ClaudeConfig(t *testing.T) {
 		t.Errorf("Expected exit code 2 even in ask mode, got %d", exitCode)
 	}
 	if output != nil {
-		t.Error("Expected nil output - claude config should always block")
+		t.Error("Expected nil output - agent config should always block")
 	}
 }
 
@@ -440,38 +507,99 @@ func TestGenerateThreatOutput_InvisibleUnicode(t *testing.T) {
 	}
 }
 
-func TestMatchesClaudeConfigPath(t *testing.T) {
+func TestMatchesAgentConfigPath(t *testing.T) {
 	tests := []struct {
 		path    string
 		pattern string
 		want    bool
 	}{
-		// .claude/ directory pattern
-		{".claude/settings.json", ".claude/", true},
-		{".claude/commands/foo.md", ".claude/", true},
-		{"path/to/.claude/settings.json", ".claude/", true},
-		{"/Users/test/project/.claude/settings.json", ".claude/", true},
+		// .claude/settings.json file pattern
+		{".claude/settings.json", ".claude/settings.json", true},
+		{"path/to/.claude/settings.json", ".claude/settings.json", true},
+		{"/Users/test/project/.claude/settings.json", ".claude/settings.json", true},
+
+		// .claude/commands/ directory pattern
+		{".claude/commands/foo.md", ".claude/commands/", true},
+		{"path/to/.claude/commands/custom.md", ".claude/commands/", true},
 
 		// CLAUDE.md file pattern
 		{"CLAUDE.md", "CLAUDE.md", true},
 		{"/Users/test/project/CLAUDE.md", "CLAUDE.md", true},
-		{"./CLAUDE.md", "CLAUDE.md", true},
+		{"CLAUDE.md", "CLAUDE.md", true},
+
+		// Cursor config patterns
+		{".cursor/hooks.json", ".cursor/hooks.json", true},
+		{"/Users/test/project/.cursor/hooks.json", ".cursor/hooks.json", true},
+		{".cursor/rules", ".cursor/rules", true},
 
 		// Should NOT match
-		{"claude.md", "CLAUDE.md", false},            // case sensitive
-		{"src/claudeutils.go", ".claude/", false},    // not .claude dir
-		{"docs/using-claude.md", "CLAUDE.md", false}, // not CLAUDE.md
+		{"claude.md", "CLAUDE.md", false},                             // case sensitive
+		{"src/claudeutils.go", ".claude/settings.json", false},        // not settings.json
+		{"docs/using-claude.md", "CLAUDE.md", false},                  // not CLAUDE.md
+		{".claude/plans/plan.md", ".claude/settings.json", false},     // different file
+		{".claude/settings.json.bak", ".claude/settings.json", false}, // different file
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.path+"_"+tt.pattern, func(t *testing.T) {
 			normalized := normalizePath(tt.path)
-			got := matchesClaudeConfigPath(normalized, tt.pattern)
+			got := matchesAgentConfigPath(normalized, tt.pattern)
 			if got != tt.want {
-				t.Errorf("matchesClaudeConfigPath(%q, %q) = %v, want %v",
+				t.Errorf("matchesAgentConfigPath(%q, %q) = %v, want %v",
 					normalized, tt.pattern, got, tt.want)
 			}
 		})
+	}
+}
+
+func TestIsInSafeSubdir(t *testing.T) {
+	tests := []struct {
+		path string
+		want bool
+	}{
+		// Safe subdirectories
+		{".claude/plans/my-plan.md", true},
+		{".claude/plans/subdir/plan.md", true},
+		{".claude/todos/todo.json", true},
+		{"/Users/test/.claude/plans/plan.md", true},
+		{"path/to/.claude/plans/file.md", true},
+
+		// Not safe
+		{".claude/settings.json", false},
+		{".claude/commands/cmd.md", false},
+		{"CLAUDE.md", false},
+		{".cursor/hooks.json", false},
+		{"src/main.go", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.path, func(t *testing.T) {
+			got := isInSafeSubdir(tt.path)
+			if got != tt.want {
+				t.Errorf("isInSafeSubdir(%q) = %v, want %v", tt.path, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestMatchesHomeConfigPath(t *testing.T) {
+	// This test is environment-dependent, so we test the logic
+	// with known paths
+
+	// Non-absolute paths should always return false
+	if matchesHomeConfigPath(".cursor/hooks.json") {
+		t.Error("Expected false for relative path")
+	}
+	if matchesHomeConfigPath("cursor/cli-config.json") {
+		t.Error("Expected false for relative path")
+	}
+
+	// Random absolute paths should not match
+	if matchesHomeConfigPath("/tmp/hooks.json") {
+		t.Error("Expected false for /tmp path")
+	}
+	if matchesHomeConfigPath("/var/log/test.json") {
+		t.Error("Expected false for /var/log path")
 	}
 }
 

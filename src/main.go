@@ -463,30 +463,12 @@ func checkAllWithTiming(ctx context.Context, sigs []signals.Signal) ([]signals.R
 
 // runAgenticMode handles the --agentic flag for AI coding assistant integration.
 // It reads a tool call JSON from stdin, performs critical threat and Rule of Two
-// analysis, and outputs appropriate JSON/exit code for Claude Code's PreToolUse hook.
+// analysis, and outputs appropriate JSON/exit code. Supports both Claude Code
+// (PreToolUse hook) and Cursor (beforeShellExecution hook).
 func runAgenticMode() int {
 	const maxAgenticInputBytes = 1 * 1024 * 1024
 
-	// Check if disabled
-	if agentic.IsDisabled() {
-		// Output allow and exit
-		output := agentic.HookOutput{
-			HookSpecificOutput: &agentic.HookSpecificOutput{
-				HookEventName:            "PreToolUse",
-				PermissionDecision:       "allow",
-				PermissionDecisionReason: "Rule of Two: disabled",
-			},
-		}
-		jsonOut, err := json.Marshal(output)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error marshaling output: %v\n", err)
-			return 1
-		}
-		fmt.Println(string(jsonOut))
-		return 0
-	}
-
-	// Read JSON from stdin
+	// Read JSON from stdin first (needed for agent detection)
 	input, err := io.ReadAll(io.LimitReader(os.Stdin, maxAgenticInputBytes+1))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error reading stdin: %v\n", err)
@@ -503,58 +485,137 @@ func runAgenticMode() int {
 		return 1
 	}
 
-	// Parse hook input
-	var hookInput agentic.HookInput
-	if err := json.Unmarshal(input, &hookInput); err != nil {
-		fmt.Fprintf(os.Stderr, "Error parsing JSON: %v\n", err)
-		return 1
+	// Detect agent type from environment, fall back to input format detection
+	agentType := agentic.DetectAgent()
+	if agentType == agentic.AgentUnknown {
+		agentType = agentic.DetectAgentFromInput(input)
+	}
+
+	// Check if disabled - output format depends on agent type
+	if agentic.IsDisabled() {
+		return outputDisabled(agentType)
+	}
+
+	// Parse hook input based on agent type
+	var hookInput *agentic.HookInput
+	switch agentType {
+	case agentic.AgentCursor:
+		hookInput, err = agentic.ParseCursorInput(input)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error parsing Cursor input: %v\n", err)
+			return 1
+		}
+	default:
+		// Claude Code format (default)
+		hookInput = &agentic.HookInput{}
+		if err := json.Unmarshal(input, hookInput); err != nil {
+			fmt.Fprintf(os.Stderr, "Error parsing JSON: %v\n", err)
+			return 1
+		}
 	}
 
 	// Check for critical threats BEFORE Rule of Two analysis
 	// These bypass the capability scoring and are handled immediately
-	if threat := agentic.DetectCriticalThreat(&hookInput); threat != nil {
-		output, exitCode, stderrMsg := agentic.GenerateThreatOutput(threat)
-
-		if exitCode == 2 {
-			fmt.Fprintln(os.Stderr, stderrMsg)
-			return 2
-		}
-
-		if output != nil {
-			jsonOut, err := json.Marshal(output)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error marshaling output: %v\n", err)
-				return 1
-			}
-			fmt.Println(string(jsonOut))
-		}
-		return exitCode
+	if threat := agentic.DetectCriticalThreat(hookInput); threat != nil {
+		return outputThreat(agentType, threat)
 	}
 
 	// Analyze for Rule of Two violations
 	analyzer := agentic.NewAnalyzer()
-	result := analyzer.Analyze(&hookInput)
+	result := analyzer.Analyze(hookInput)
 
-	// Generate output
-	output, exitCode, stderrMsg := agentic.GenerateOutput(result)
+	// Generate output based on agent type
+	return outputResult(agentType, result)
+}
 
-	if exitCode == 2 {
-		// Block action - write error to stderr
-		fmt.Fprintln(os.Stderr, stderrMsg)
-		return 2
-	}
-
-	// Output JSON to stdout
-	if output != nil {
+// outputDisabled outputs the appropriate "disabled" response for the agent type.
+func outputDisabled(agentType agentic.AgentType) int {
+	switch agentType {
+	case agentic.AgentCursor:
+		jsonOut, exitCode, _ := agentic.GenerateCursorDisabledOutput()
+		fmt.Println(string(jsonOut))
+		return exitCode
+	default:
+		// Claude Code format
+		output := agentic.HookOutput{
+			HookSpecificOutput: &agentic.HookSpecificOutput{
+				HookEventName:            "PreToolUse",
+				PermissionDecision:       "allow",
+				PermissionDecisionReason: "Rule of Two: disabled",
+			},
+		}
 		jsonOut, err := json.Marshal(output)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error marshaling output: %v\n", err)
 			return 1
 		}
 		fmt.Println(string(jsonOut))
+		return 0
+	}
+}
+
+// outputThreat outputs the appropriate threat response for the agent type.
+func outputThreat(agentType agentic.AgentType, threat *agentic.CriticalThreat) int {
+	var jsonOut []byte
+	var exitCode int
+	var stderrMsg string
+
+	switch agentType {
+	case agentic.AgentCursor:
+		jsonOut, exitCode, stderrMsg = agentic.GenerateCursorThreatOutput(threat)
+	default:
+		// Claude Code format
+		var output *agentic.HookOutput
+		output, exitCode, stderrMsg = agentic.GenerateThreatOutput(threat)
+		if output != nil {
+			var err error
+			jsonOut, err = json.Marshal(output)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error marshaling output: %v\n", err)
+				return 1
+			}
+		}
 	}
 
-	return 0
+	if exitCode == 2 {
+		fmt.Fprintln(os.Stderr, stderrMsg)
+	}
+	if jsonOut != nil {
+		fmt.Println(string(jsonOut))
+	}
+	return exitCode
+}
+
+// outputResult outputs the appropriate analysis result for the agent type.
+func outputResult(agentType agentic.AgentType, result *agentic.AnalysisResult) int {
+	var jsonOut []byte
+	var exitCode int
+	var stderrMsg string
+
+	switch agentType {
+	case agentic.AgentCursor:
+		jsonOut, exitCode, stderrMsg = agentic.GenerateCursorOutput(result)
+	default:
+		// Claude Code format
+		var output *agentic.HookOutput
+		output, exitCode, stderrMsg = agentic.GenerateOutput(result)
+		if output != nil {
+			var err error
+			jsonOut, err = json.Marshal(output)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error marshaling output: %v\n", err)
+				return 1
+			}
+		}
+	}
+
+	if exitCode == 2 {
+		fmt.Fprintln(os.Stderr, stderrMsg)
+	}
+	if jsonOut != nil {
+		fmt.Println(string(jsonOut))
+	}
+	return exitCode
 }
 
 // displayDebugInfo outputs detailed debug information to stderr

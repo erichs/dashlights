@@ -860,7 +860,9 @@ func TestDisplaySignalDiagnosticsEmptyVerboseRemediation(t *testing.T) {
 func TestRunAgenticModeDisabled(t *testing.T) {
 	t.Setenv("DASHLIGHTS_DISABLE_AGENTIC", "1")
 
-	exitCode, stdout, stderr := captureRunAgenticMode(t, "")
+	// Need to provide valid input since stdin is read before checking disabled
+	input := `{"tool_name":"Read","tool_input":{"file_path":"test.txt"}}`
+	exitCode, stdout, stderr := captureRunAgenticMode(t, input)
 
 	if exitCode != 0 {
 		t.Errorf("Expected exit code 0, got %d", exitCode)
@@ -920,7 +922,7 @@ func TestRunAgenticModeCriticalThreatBlock(t *testing.T) {
 	if stdout != "" {
 		t.Errorf("Expected empty stdout, got %q", stdout)
 	}
-	if !strings.Contains(stderr, "Blocked: Attempted write to Claude agent configuration") {
+	if !strings.Contains(stderr, "Blocked: Attempted write to agent configuration") {
 		t.Errorf("Expected blocked message, got: %s", stderr)
 	}
 }
