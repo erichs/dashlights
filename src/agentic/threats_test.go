@@ -76,6 +76,38 @@ func TestDetectClaudeConfigWrite(t *testing.T) {
 			wantThreat: false,
 		},
 		{
+			name:     "Bash redirect write to .claude",
+			toolName: "Bash",
+			toolInput: map[string]interface{}{
+				"command": "echo test > .claude/settings.json",
+			},
+			wantThreat: true,
+		},
+		{
+			name:     "Bash tee write to CLAUDE.md",
+			toolName: "Bash",
+			toolInput: map[string]interface{}{
+				"command": "printf 'x' | tee CLAUDE.md",
+			},
+			wantThreat: true,
+		},
+		{
+			name:     "Bash redirect write with quotes",
+			toolName: "Bash",
+			toolInput: map[string]interface{}{
+				"command": "echo test > \".claude/settings.json\"",
+			},
+			wantThreat: true,
+		},
+		{
+			name:     "Bash redirect to non-claude path",
+			toolName: "Bash",
+			toolInput: map[string]interface{}{
+				"command": "echo test > ./tmp/output.txt",
+			},
+			wantThreat: false,
+		},
+		{
 			name:     "Read - not a write",
 			toolName: "Read",
 			toolInput: map[string]interface{}{
@@ -509,5 +541,158 @@ func TestGetContext(t *testing.T) {
 	}
 	if len(ctx) > 20 { // contextLen is 5, so max ~11 chars + marker
 		t.Errorf("Context too long: %q", ctx)
+	}
+}
+
+func TestExtractBashWriteTargets(t *testing.T) {
+	tests := []struct {
+		name    string
+		command string
+		want    []string
+	}{
+		{
+			name:    "Simple redirect",
+			command: "echo hi > .claude/settings.json",
+			want:    []string{".claude/settings.json"},
+		},
+		{
+			name:    "Append redirect with fd",
+			command: "echo hi 1>>CLAUDE.md",
+			want:    []string{"CLAUDE.md"},
+		},
+		{
+			name:    "Redirect with combined fd",
+			command: "echo hi &>>.claude/settings.json",
+			want:    []string{".claude/settings.json"},
+		},
+		{
+			name:    "Redirect with attached path",
+			command: "echo hi >/tmp/out.txt",
+			want:    []string{"/tmp/out.txt"},
+		},
+		{
+			name:    "Tee command",
+			command: "echo hi | tee ./CLAUDE.md",
+			want:    []string{"./CLAUDE.md"},
+		},
+		{
+			name:    "Tee with absolute path",
+			command: "echo hi | /usr/bin/tee .claude/settings.json",
+			want:    []string{".claude/settings.json"},
+		},
+		{
+			name:    "Tee with options",
+			command: "echo hi | tee -a .claude/settings.json",
+			want:    []string{".claude/settings.json"},
+		},
+		{
+			name:    "No write targets",
+			command: "cat CLAUDE.md | wc -l",
+			want:    nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := extractBashWriteTargets(tt.command)
+			if len(got) != len(tt.want) {
+				t.Fatalf("Expected %d targets, got %d: %v", len(tt.want), len(got), got)
+			}
+			for i := range got {
+				if got[i] != tt.want[i] {
+					t.Errorf("Target %d = %q, want %q", i, got[i], tt.want[i])
+				}
+			}
+		})
+	}
+}
+
+func TestTokenizeBashCommand(t *testing.T) {
+	command := "echo 'hello world' | tee \"file name.txt\" > out.txt"
+	tokens := tokenizeBashCommand(command)
+	if len(tokens) == 0 {
+		t.Fatal("Expected tokens, got none")
+	}
+	if tokens[2] != "|" {
+		t.Errorf("Expected pipe token at index 2, got %q", tokens[2])
+	}
+
+	command = "echo hi\\;there; echo done"
+	tokens = tokenizeBashCommand(command)
+	if len(tokens) < 3 {
+		t.Fatalf("Expected more tokens, got %v", tokens)
+	}
+	if tokens[2] != ";" {
+		t.Errorf("Expected semicolon token at index 2, got %q", tokens[2])
+	}
+}
+
+func TestCleanBashPathToken(t *testing.T) {
+	tests := []struct {
+		token string
+		want  string
+	}{
+		{"\"file.txt\"", "file.txt"},
+		{"'file.txt'", "file.txt"},
+		{"file.txt;", "file.txt"},
+		{"file.txt|", "file.txt"},
+		{" file.txt ", "file.txt"},
+	}
+
+	for _, tt := range tests {
+		got := cleanBashPathToken(tt.token)
+		if got != tt.want {
+			t.Errorf("cleanBashPathToken(%q) = %q, want %q", tt.token, got, tt.want)
+		}
+	}
+}
+
+func TestExtractRedirectionTarget(t *testing.T) {
+	tokens := []string{"echo", "hi", ">", "out.txt"}
+	target := extractRedirectionTarget(tokens[2], tokens, 2)
+	if target != "out.txt" {
+		t.Errorf("Expected out.txt, got %q", target)
+	}
+
+	tokens = []string{"echo", "hi", "2>/tmp/err.txt"}
+	target = extractRedirectionTarget(tokens[2], tokens, 2)
+	if target != "/tmp/err.txt" {
+		t.Errorf("Expected /tmp/err.txt, got %q", target)
+	}
+
+	tokens = []string{"echo", "hi", ">", "&1"}
+	target = extractRedirectionTarget(tokens[2], tokens, 2)
+	if target != "" {
+		t.Errorf("Expected empty target for fd redirect, got %q", target)
+	}
+
+	target = extractRedirectionTarget("", tokens, 0)
+	if target != "" {
+		t.Errorf("Expected empty target for empty token, got %q", target)
+	}
+}
+
+func TestTeeHelpers(t *testing.T) {
+	if !isTeeCommand("tee") {
+		t.Error("Expected tee to be recognized")
+	}
+	if !isTeeCommand("/usr/bin/tee") {
+		t.Error("Expected /usr/bin/tee to be recognized")
+	}
+	if isTeeCommand("nottee") {
+		t.Error("Expected nottee to be ignored")
+	}
+
+	tokens := []string{"-a", "out.txt", "|", "wc"}
+	targets := extractTeeTargets(tokens)
+	if len(targets) != 1 || targets[0] != "out.txt" {
+		t.Errorf("Unexpected tee targets: %v", targets)
+	}
+
+	if !isRedirectionOperator(">>") {
+		t.Error("Expected >> to be recognized as redirection")
+	}
+	if isRedirectionOperator("<") {
+		t.Error("Expected < to be ignored as redirection")
 	}
 }
