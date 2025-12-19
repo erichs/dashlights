@@ -55,7 +55,7 @@ func DetectAgentFromInput(raw []byte) AgentType {
 	if probe.CursorVersion != "" {
 		return AgentCursor
 	}
-	if probe.HookEventName == "beforeShellExecution" || probe.HookEventName == "beforeMCPExecution" {
+	if probe.HookEventName == "beforeShellExecution" {
 		return AgentCursor
 	}
 

@@ -98,14 +98,6 @@ func TestDetectAgentFromInput(t *testing.T) {
 			want: AgentCursor,
 		},
 		{
-			name: "Cursor beforeMCPExecution",
-			input: `{
-				"tool_name": "some_mcp_tool",
-				"hook_event_name": "beforeMCPExecution"
-			}`,
-			want: AgentCursor,
-		},
-		{
 			name: "Cursor shell without hook_event_name but has command",
 			input: `{
 				"command": "echo hello",
