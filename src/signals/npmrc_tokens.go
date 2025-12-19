@@ -73,6 +73,12 @@ func (s *NpmrcTokensSignal) Check(ctx context.Context) bool {
 	maxLines := 100 // Only scan first 100 lines for performance
 
 	for scanner.Scan() && lineCount < maxLines {
+		select {
+		case <-ctx.Done():
+			return false
+		default:
+		}
+
 		line := strings.TrimSpace(scanner.Text())
 		lineCount++
 

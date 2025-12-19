@@ -63,6 +63,12 @@ func (s *GoReplaceSignal) Check(ctx context.Context) bool {
 
 	scanner := bufio.NewScanner(strings.NewReader(data))
 	for scanner.Scan() {
+		select {
+		case <-ctx.Done():
+			return false
+		default:
+		}
+
 		line := strings.TrimSpace(scanner.Text())
 
 		// Skip comments

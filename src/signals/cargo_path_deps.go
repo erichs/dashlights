@@ -65,6 +65,12 @@ func (s *CargoPathDepsSignal) Check(ctx context.Context) bool {
 	inDependenciesSection := false
 
 	for scanner.Scan() {
+		select {
+		case <-ctx.Done():
+			return false
+		default:
+		}
+
 		line := strings.TrimSpace(scanner.Text())
 
 		// Skip comments

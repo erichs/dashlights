@@ -62,6 +62,12 @@ func (s *UntrackedCryptoKeysSignal) Check(ctx context.Context) bool {
 	}
 
 	for _, entry := range entries {
+		select {
+		case <-ctx.Done():
+			return false
+		default:
+		}
+
 		if entry.IsDir() {
 			continue
 		}
