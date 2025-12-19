@@ -212,6 +212,10 @@ func extractBashWriteTargets(command string) []string {
 
 	var targets []string
 
+	if inPlaceTargets := extractInPlaceEditorTargets(tokens); len(inPlaceTargets) > 0 {
+		targets = append(targets, inPlaceTargets...)
+	}
+
 	for i := 0; i < len(tokens); i++ {
 		tok := tokens[i]
 
@@ -227,6 +231,124 @@ func extractBashWriteTargets(command string) []string {
 		}
 	}
 
+	return targets
+}
+
+func extractInPlaceEditorTargets(tokens []string) []string {
+	if len(tokens) == 0 {
+		return nil
+	}
+
+	cmd := filepath.Base(cleanBashPathToken(tokens[0]))
+	switch cmd {
+	case "sed", "gsed":
+		return extractSedInPlaceTargets(tokens[1:])
+	case "perl", "ruby":
+		return extractPerlRubyInPlaceTargets(tokens[1:])
+	default:
+		return nil
+	}
+}
+
+func extractSedInPlaceTargets(tokens []string) []string {
+	var operands []string
+	inPlace := false
+	hasScriptOption := false
+
+	for i := 0; i < len(tokens); i++ {
+		tok := tokens[i]
+		if tok == "|" || tok == "||" || tok == "&&" || tok == ";" {
+			break
+		}
+		if strings.HasPrefix(tok, "-") {
+			if tok == "--" {
+				operands = append(operands, tokens[i+1:]...)
+				break
+			}
+			if strings.HasPrefix(tok, "-i") {
+				inPlace = true
+				if tok == "-i" && i+1 < len(tokens) && !strings.HasPrefix(tokens[i+1], "-") {
+					i++
+				}
+				continue
+			}
+			if tok == "-e" || tok == "-f" {
+				hasScriptOption = true
+				if i+1 < len(tokens) {
+					i++
+				}
+				continue
+			}
+			continue
+		}
+		operands = append(operands, tok)
+	}
+
+	if !inPlace {
+		return nil
+	}
+
+	if !hasScriptOption {
+		if len(operands) <= 1 {
+			return nil
+		}
+		operands = operands[1:]
+	}
+
+	return cleanTargets(operands)
+}
+
+func extractPerlRubyInPlaceTargets(tokens []string) []string {
+	var operands []string
+	inPlace := false
+	hasScriptOption := false
+
+	for i := 0; i < len(tokens); i++ {
+		tok := tokens[i]
+		if tok == "|" || tok == "||" || tok == "&&" || tok == ";" {
+			break
+		}
+		if strings.HasPrefix(tok, "-") {
+			if tok == "--" {
+				operands = append(operands, tokens[i+1:]...)
+				break
+			}
+			if strings.Contains(tok, "i") {
+				inPlace = true
+			}
+			if tok == "-e" {
+				hasScriptOption = true
+				if i+1 < len(tokens) {
+					i++
+				}
+			}
+			continue
+		}
+		operands = append(operands, tok)
+	}
+
+	if !inPlace {
+		return nil
+	}
+
+	if !hasScriptOption {
+		if len(operands) <= 1 {
+			return nil
+		}
+		operands = operands[1:]
+	}
+
+	return cleanTargets(operands)
+}
+
+func cleanTargets(tokens []string) []string {
+	var targets []string
+	for _, tok := range tokens {
+		target := cleanBashPathToken(tok)
+		if target != "" {
+			targets = append(targets, target)
+		}
+	}
 	return targets
 }
 

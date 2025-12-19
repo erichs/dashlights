@@ -167,6 +167,22 @@ func TestDetectAgentConfigWrite(t *testing.T) {
 			wantThreat: false,
 		},
 		{
+			name:     "Bash sed -i write to cursor hooks",
+			toolName: "Bash",
+			toolInput: map[string]interface{}{
+				"command": "sed -i '' 's/old/new/' ~/.cursor/hooks.json",
+			},
+			wantThreat: true,
+		},
+		{
+			name:     "Bash perl -pi write to cursor hooks",
+			toolName: "Bash",
+			toolInput: map[string]interface{}{
+				"command": "perl -pi -e 's/old/new/' ~/.cursor/hooks.json",
+			},
+			wantThreat: true,
+		},
+		{
 			name:     "Bash redirect to .claude/plans/ - safe",
 			toolName: "Bash",
 			toolInput: map[string]interface{}{

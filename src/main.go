@@ -577,7 +577,7 @@ func outputThreat(agentType agentic.AgentType, threat *agentic.CriticalThreat) i
 		}
 	}
 
-	if exitCode == 2 {
+	if exitCode == 2 && agentType != agentic.AgentCursor {
 		fmt.Fprintln(os.Stderr, stderrMsg)
 	}
 	if jsonOut != nil {
