@@ -100,6 +100,45 @@ func TestReadFileLimited(t *testing.T) {
 			t.Errorf("got %q, want %q", string(data), "12345")
 		}
 	})
+
+	t.Run("follows symlink to regular file", func(t *testing.T) {
+		dir := t.TempDir()
+		target := filepath.Join(dir, "target.txt")
+		link := filepath.Join(dir, "link.txt")
+
+		if err := os.WriteFile(target, []byte("content"), 0600); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink(target, link); err != nil {
+			t.Skip("symlinks not supported")
+		}
+
+		data, err := ReadFileLimited(link, 100)
+		if err != nil {
+			t.Fatalf("symlink to regular file should succeed: %v", err)
+		}
+		if string(data) != "content" {
+			t.Errorf("got %q, want %q", string(data), "content")
+		}
+	})
+
+	t.Run("rejects symlink to directory", func(t *testing.T) {
+		dir := t.TempDir()
+		subdir := filepath.Join(dir, "subdir")
+		link := filepath.Join(dir, "link")
+
+		if err := os.Mkdir(subdir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink(subdir, link); err != nil {
+			t.Skip("symlinks not supported")
+		}
+
+		_, err := ReadFileLimited(link, 100)
+		if err != ErrNotRegular {
+			t.Errorf("symlink to directory: got %v, want ErrNotRegular", err)
+		}
+	})
 }
 
 func TestReadFileLimitedString(t *testing.T) {
