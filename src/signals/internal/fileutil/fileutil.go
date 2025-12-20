@@ -4,6 +4,7 @@ package fileutil
 import (
 	"errors"
 	"io"
+	"math"
 	"os"
 	"path/filepath"
 )
@@ -18,7 +19,7 @@ var (
 // ReadFileLimited reads at most maxBytes from a regular file.
 // It rejects non-regular files and enforces the byte limit to prevent OOMs.
 func ReadFileLimited(path string, maxBytes int64) ([]byte, error) {
-	if maxBytes <= 0 {
+	if maxBytes <= 0 || maxBytes > math.MaxInt {
 		return nil, ErrFileTooLarge
 	}
 
