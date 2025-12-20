@@ -24,6 +24,7 @@ type InvisibleCharInfo struct {
 	Name     string
 	Position int
 	Context  string // surrounding characters for display
+	Field    string // which input field contained this character
 }
 
 // invisibleUnicodeRange defines a range of invisible Unicode characters.
@@ -576,7 +577,7 @@ func detectInvisibleUnicode(input *HookInput) []InvisibleCharInfo {
 }
 
 // scanForInvisible scans a string for invisible Unicode characters.
-func scanForInvisible(s string, _ string) []InvisibleCharInfo {
+func scanForInvisible(s string, fieldName string) []InvisibleCharInfo {
 	if s == "" {
 		return nil
 	}
@@ -591,6 +592,7 @@ func scanForInvisible(s string, _ string) []InvisibleCharInfo {
 				Name:     name,
 				Position: i,
 				Context:  getContext(runes, i),
+				Field:    fieldName,
 			})
 		}
 	}

@@ -232,6 +232,7 @@ func TestDetectInvisibleUnicode(t *testing.T) {
 		toolInput  map[string]interface{}
 		wantCount  int
 		wantThreat bool
+		wantField  string // expected Field value when wantCount == 1
 	}{
 		{
 			name:     "Zero-width space in content",
@@ -242,6 +243,7 @@ func TestDetectInvisibleUnicode(t *testing.T) {
 			},
 			wantCount:  1,
 			wantThreat: true,
+			wantField:  "content",
 		},
 		{
 			name:     "Multiple invisible chars",
@@ -252,6 +254,7 @@ func TestDetectInvisibleUnicode(t *testing.T) {
 			},
 			wantCount:  3,
 			wantThreat: true,
+			wantField:  "content", // all in same field
 		},
 		{
 			name:     "Right-to-left override in bash",
@@ -261,6 +264,7 @@ func TestDetectInvisibleUnicode(t *testing.T) {
 			},
 			wantCount:  1,
 			wantThreat: true,
+			wantField:  "command",
 		},
 		{
 			name:     "Invisible char in file path",
@@ -271,6 +275,7 @@ func TestDetectInvisibleUnicode(t *testing.T) {
 			},
 			wantCount:  1,
 			wantThreat: true,
+			wantField:  "file_path",
 		},
 		{
 			name:     "BOM in content",
@@ -282,6 +287,7 @@ func TestDetectInvisibleUnicode(t *testing.T) {
 			},
 			wantCount:  1,
 			wantThreat: true,
+			wantField:  "new_string",
 		},
 		{
 			name:     "Normal content - no invisible chars",
@@ -322,6 +328,7 @@ func TestDetectInvisibleUnicode(t *testing.T) {
 			},
 			wantCount:  1,
 			wantThreat: true,
+			wantField:  "pattern",
 		},
 		{
 			name:     "Invisible in Glob pattern",
@@ -331,6 +338,7 @@ func TestDetectInvisibleUnicode(t *testing.T) {
 			},
 			wantCount:  1,
 			wantThreat: true,
+			wantField:  "pattern",
 		},
 		{
 			name:     "Tag character - used for invisible encoding",
@@ -340,6 +348,7 @@ func TestDetectInvisibleUnicode(t *testing.T) {
 			},
 			wantCount:  1,
 			wantThreat: true,
+			wantField:  "command",
 		},
 	}
 
@@ -355,7 +364,16 @@ func TestDetectInvisibleUnicode(t *testing.T) {
 			if len(findings) != tt.wantCount {
 				t.Errorf("Expected %d invisible chars, found %d", tt.wantCount, len(findings))
 				for _, f := range findings {
-					t.Logf("  Found: %s (U+%04X) at pos %d", f.Name, f.Rune, f.Position)
+					t.Logf("  Found: %s (U+%04X) at pos %d in field %q", f.Name, f.Rune, f.Position, f.Field)
+				}
+			}
+
+			// Verify Field is set correctly
+			if tt.wantField != "" && len(findings) > 0 {
+				for _, f := range findings {
+					if f.Field != tt.wantField {
+						t.Errorf("Expected Field %q, got %q", tt.wantField, f.Field)
+					}
 				}
 			}
 
