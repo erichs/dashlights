@@ -5,6 +5,8 @@ import (
 	"context"
 	"os"
 	"strings"
+
+	"github.com/erichs/dashlights/src/signals/internal/fileutil"
 )
 
 // GoReplaceSignal checks for replace directives in go.mod
@@ -51,15 +53,22 @@ func (s *GoReplaceSignal) Check(ctx context.Context) bool {
 	}
 
 	// Check if go.mod exists in current directory
-	file, err := os.Open("go.mod")
+	const maxGoModBytes = 256 * 1024
+
+	data, err := fileutil.ReadFileLimitedString("go.mod", maxGoModBytes)
 	if err != nil {
 		// No go.mod file - not a Go project or not in project root
 		return false
 	}
-	defer file.Close()
 
-	scanner := bufio.NewScanner(file)
+	scanner := bufio.NewScanner(strings.NewReader(data))
 	for scanner.Scan() {
+		select {
+		case <-ctx.Done():
+			return false
+		default:
+		}
+
 		line := strings.TrimSpace(scanner.Text())
 
 		// Skip comments

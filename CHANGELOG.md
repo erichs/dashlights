@@ -5,6 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2025-12-19
+
+This release introduces --agentic mode, see docs/agentic_mode.md for
+details.
+
+This mode is intended to be used with coding agents that support tool
+hooks, currently Claude Code and Cursor.
+
+### Added
+- Added critical threat detection for Claude configuration writes and invisible Unicode characters
+- Added file redirection and tee detection heuristics for agentic mode
+- Added tests to document symlink behavior in file read operations
+- Added support for Cursor in agentic mode
+
+### Changed
+- Improved agentic mode debug handling to avoid swallowing JSON errors
+- Improved data collection and diagnostics for invisible Unicode scanning
+- Improved context cancellation behavior for multiple signals to enhance responsiveness
+- Clarified supported hooks in agentic mode for better user understanding
+- Refactored agentic package for improved structure and maintainability
+- Hardened file and agentic input handling with bounded reads to improve safety and stability
+- Upgraded to Go version 1.25 for better performance and compatibility
+- Tweaked README documentation for clarity
+
+### Fixed
+- Handled error cases during debug mode propagation to prevent silent failures
+- Ignored swap files to avoid unnecessary processing
+- Detected use of in-place editors when modifying critical agent configuration to prevent unnoticed changes
+
+### Security
+- Improved detection of critical agent configuration modifications to enhance security monitoring
+
+### Testing
+- Increased test coverage for main application code and agentic threat detection components
+
+
 ## [1.0.7-slsa-2] - 2025-12-17
 
 ### Fixed

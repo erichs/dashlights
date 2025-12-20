@@ -85,6 +85,12 @@ func (s *PrivilegedPathSignal) Check(ctx context.Context) bool {
 	userBinDirs := buildUserBinDirMap()
 
 	for i, p := range paths {
+		select {
+		case <-ctx.Done():
+			return false
+		default:
+		}
+
 		// Check for empty string between separators (::) which implies current directory
 		if p == "" {
 			msg := "Empty PATH entry (::) found (implies current directory)"

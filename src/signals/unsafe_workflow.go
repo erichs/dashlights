@@ -1,13 +1,13 @@
 package signals
 
 import (
-	"bufio"
 	"context"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
+	"github.com/erichs/dashlights/src/signals/internal/fileutil"
 	"github.com/erichs/dashlights/src/signals/internal/pathsec"
 	"gopkg.in/yaml.v3"
 )
@@ -18,6 +18,8 @@ type UnsafeWorkflowSignal struct {
 	pwnRequestFiles []string
 	exprInjections  []exprInjectionFinding
 }
+
+const maxWorkflowBytes = 512 * 1024
 
 // exprInjectionFinding stores details about an expression injection vulnerability
 type exprInjectionFinding struct {
@@ -149,8 +151,13 @@ func (s *UnsafeWorkflowSignal) hasFindings() bool {
 }
 
 func (s *UnsafeWorkflowSignal) checkWorkflowFile(ctx context.Context, filePath, name string) {
-	hasPRT := s.quickScanForPullRequestTarget(filePath)
-	hasExpr := s.quickScanForUntrustedExpr(filePath)
+	data, err := fileutil.ReadFileLimitedString(filePath, maxWorkflowBytes)
+	if err != nil {
+		return
+	}
+
+	hasPRT := s.quickScanForPullRequestTarget(data)
+	hasExpr := s.quickScanForUntrustedExpr(data)
 
 	if !hasPRT && !hasExpr {
 		return
@@ -162,64 +169,34 @@ func (s *UnsafeWorkflowSignal) checkWorkflowFile(ctx context.Context, filePath, 
 	default:
 	}
 
-	s.parseAndCheckWorkflow(ctx, filePath, name, hasPRT, hasExpr)
+	s.parseAndCheckWorkflow(ctx, data, name, hasPRT, hasExpr)
 }
 
-// quickScanForPullRequestTarget does a fast line-by-line scan
-func (s *UnsafeWorkflowSignal) quickScanForPullRequestTarget(filePath string) bool {
-	cleanPath := filepath.Clean(filePath)
-	file, err := os.Open(cleanPath)
-	if err != nil {
-		return false
-	}
-	defer file.Close()
+// quickScanForPullRequestTarget does a fast substring scan.
+func (s *UnsafeWorkflowSignal) quickScanForPullRequestTarget(data string) bool {
+	return strings.Contains(data, "pull_request_target")
+}
 
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		if strings.Contains(scanner.Text(), "pull_request_target") {
+// quickScanForUntrustedExpr does a fast scan for untrusted expressions.
+func (s *UnsafeWorkflowSignal) quickScanForUntrustedExpr(data string) bool {
+	for _, pattern := range untrustedContextPatterns {
+		if strings.Contains(data, pattern) {
 			return true
 		}
 	}
 	return false
 }
 
-// quickScanForUntrustedExpr does a fast scan for untrusted expressions
-func (s *UnsafeWorkflowSignal) quickScanForUntrustedExpr(filePath string) bool {
-	cleanPath := filepath.Clean(filePath)
-	file, err := os.Open(cleanPath)
-	if err != nil {
-		return false
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-		for _, pattern := range untrustedContextPatterns {
-			if strings.Contains(line, pattern) {
-				return true
-			}
-		}
-	}
-	return false
-}
-
 // parseAndCheckWorkflow performs full YAML parsing to detect vulnerable patterns
-func (s *UnsafeWorkflowSignal) parseAndCheckWorkflow(ctx context.Context, filePath, name string, checkPRT, checkExpr bool) {
+func (s *UnsafeWorkflowSignal) parseAndCheckWorkflow(ctx context.Context, data string, name string, checkPRT, checkExpr bool) {
 	select {
 	case <-ctx.Done():
 		return
 	default:
 	}
 
-	cleanPath := filepath.Clean(filePath)
-	data, err := os.ReadFile(cleanPath)
-	if err != nil {
-		return
-	}
-
 	var workflow WorkflowExt
-	if err := yaml.Unmarshal(data, &workflow); err != nil {
+	if err := yaml.Unmarshal([]byte(data), &workflow); err != nil {
 		return
 	}
 

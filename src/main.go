@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -14,6 +15,7 @@ import (
 	"time"
 
 	arg "github.com/alexflint/go-arg"
+	"github.com/erichs/dashlights/src/agentic"
 	"github.com/erichs/dashlights/src/signals"
 	"github.com/fatih/color"
 )
@@ -44,6 +46,7 @@ type cliArgs struct {
 	ListCustomMode  bool `arg:"-l,--list-custom,help:List supported color attributes and emoji aliases for custom lights."`
 	ClearCustomMode bool `arg:"-c,--clear-custom,help:Shell code to clear custom DASHLIGHT_ environment variables."`
 	DebugMode       bool `arg:"--debug,help:Debug mode: disable timeouts and show detailed execution timing."`
+	AgenticMode     bool `arg:"--agentic,help:Agentic mode for AI coding assistants (reads JSON from stdin)."`
 }
 
 // Version returns the version string for --version flag
@@ -70,6 +73,18 @@ func displayClearCodes(w io.Writer, lights *[]dashlight) {
 
 func main() {
 	arg.MustParse(&args)
+
+	// Propagate debug flag to environment for packages that need it
+	if args.DebugMode {
+		if err := os.Setenv("DASHLIGHTS_DEBUG", "1"); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: failed to set DASHLIGHTS_DEBUG: %v\n", err)
+		}
+	}
+
+	// Agentic mode: completely different execution path for AI coding assistant hooks
+	if args.AgenticMode {
+		os.Exit(runAgenticMode())
+	}
 
 	startTime := time.Now()
 	var envParseStart, envParseEnd time.Time
@@ -305,7 +320,10 @@ func displayDiagnostics(w io.Writer, lights *[]dashlight) {
 }
 
 func parseDashlightFromEnv(lights *[]dashlight, env string) {
-	kv := strings.Split(env, "=")
+	kv := strings.SplitN(env, "=", 2)
+	if len(kv) < 2 {
+		return
+	}
 	dashvar := kv[0]
 	diagnostic := kv[1]
 	if strings.Contains(dashvar, "DASHLIGHT_") {
@@ -448,6 +466,163 @@ func checkAllWithTiming(ctx context.Context, sigs []signals.Signal) ([]signals.R
 	}
 
 	return results, debugResults, true // All complete
+}
+
+// runAgenticMode handles the --agentic flag for AI coding assistant integration.
+// It reads a tool call JSON from stdin, performs critical threat and Rule of Two
+// analysis, and outputs appropriate JSON/exit code. Supports both Claude Code
+// (PreToolUse hook) and Cursor (beforeShellExecution hook).
+func runAgenticMode() int {
+	const maxAgenticInputBytes = 1 * 1024 * 1024
+
+	// Read JSON from stdin first (needed for agent detection)
+	input, err := io.ReadAll(io.LimitReader(os.Stdin, maxAgenticInputBytes+1))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error reading stdin: %v\n", err)
+		return 1
+	}
+	if len(input) > maxAgenticInputBytes {
+		fmt.Fprintf(os.Stderr, "Error: input exceeds %d bytes\n", maxAgenticInputBytes)
+		return 1
+	}
+
+	// Handle empty input gracefully
+	if len(input) == 0 {
+		fmt.Fprintln(os.Stderr, "Error: no input provided on stdin")
+		return 1
+	}
+
+	// Detect agent type from environment, fall back to input format detection
+	agentType := agentic.DetectAgent()
+	if agentType == agentic.AgentUnknown {
+		agentType = agentic.DetectAgentFromInput(input)
+	}
+
+	// Check if disabled - output format depends on agent type
+	if agentic.IsDisabled() {
+		return outputDisabled(agentType)
+	}
+
+	// Parse hook input based on agent type
+	var hookInput *agentic.HookInput
+	switch agentType {
+	case agentic.AgentCursor:
+		hookInput, err = agentic.ParseCursorInput(input)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error parsing Cursor input: %v\n", err)
+			return 1
+		}
+	default:
+		// Claude Code format (default)
+		hookInput = &agentic.HookInput{}
+		if err := json.Unmarshal(input, hookInput); err != nil {
+			fmt.Fprintf(os.Stderr, "Error parsing JSON: %v\n", err)
+			return 1
+		}
+	}
+
+	// Check for critical threats BEFORE Rule of Two analysis
+	// These bypass the capability scoring and are handled immediately
+	if threat := agentic.DetectCriticalThreat(hookInput); threat != nil {
+		return outputThreat(agentType, threat)
+	}
+
+	// Analyze for Rule of Two violations
+	analyzer := agentic.NewAnalyzer()
+	result := analyzer.Analyze(hookInput)
+
+	// Generate output based on agent type
+	return outputResult(agentType, result)
+}
+
+// outputDisabled outputs the appropriate "disabled" response for the agent type.
+func outputDisabled(agentType agentic.AgentType) int {
+	switch agentType {
+	case agentic.AgentCursor:
+		jsonOut, exitCode, _ := agentic.GenerateCursorDisabledOutput()
+		fmt.Println(string(jsonOut))
+		return exitCode
+	default:
+		// Claude Code format
+		output := agentic.HookOutput{
+			HookSpecificOutput: &agentic.HookSpecificOutput{
+				HookEventName:            "PreToolUse",
+				PermissionDecision:       "allow",
+				PermissionDecisionReason: "Rule of Two: disabled",
+			},
+		}
+		jsonOut, err := json.Marshal(output)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error marshaling output: %v\n", err)
+			return 1
+		}
+		fmt.Println(string(jsonOut))
+		return 0
+	}
+}
+
+// outputThreat outputs the appropriate threat response for the agent type.
+func outputThreat(agentType agentic.AgentType, threat *agentic.CriticalThreat) int {
+	var jsonOut []byte
+	var exitCode int
+	var stderrMsg string
+
+	switch agentType {
+	case agentic.AgentCursor:
+		jsonOut, exitCode, stderrMsg = agentic.GenerateCursorThreatOutput(threat)
+	default:
+		// Claude Code format
+		var output *agentic.HookOutput
+		output, exitCode, stderrMsg = agentic.GenerateThreatOutput(threat)
+		if output != nil {
+			var err error
+			jsonOut, err = json.Marshal(output)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error marshaling output: %v\n", err)
+				return 1
+			}
+		}
+	}
+
+	if exitCode == 2 && agentType != agentic.AgentCursor {
+		fmt.Fprintln(os.Stderr, stderrMsg)
+	}
+	if jsonOut != nil {
+		fmt.Println(string(jsonOut))
+	}
+	return exitCode
+}
+
+// outputResult outputs the appropriate analysis result for the agent type.
+func outputResult(agentType agentic.AgentType, result *agentic.AnalysisResult) int {
+	var jsonOut []byte
+	var exitCode int
+	var stderrMsg string
+
+	switch agentType {
+	case agentic.AgentCursor:
+		jsonOut, exitCode, stderrMsg = agentic.GenerateCursorOutput(result)
+	default:
+		// Claude Code format
+		var output *agentic.HookOutput
+		output, exitCode, stderrMsg = agentic.GenerateOutput(result)
+		if output != nil {
+			var err error
+			jsonOut, err = json.Marshal(output)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error marshaling output: %v\n", err)
+				return 1
+			}
+		}
+	}
+
+	if exitCode == 2 {
+		fmt.Fprintln(os.Stderr, stderrMsg)
+	}
+	if jsonOut != nil {
+		fmt.Println(string(jsonOut))
+	}
+	return exitCode
 }
 
 // displayDebugInfo outputs detailed debug information to stderr

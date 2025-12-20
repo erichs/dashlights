@@ -21,7 +21,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: '1.22.4'
+          go-version: '1.25'
 
       - name: Check formatting
         run: |
@@ -46,7 +46,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: '1.22.4'
+          go-version: '1.25'
 
       - name: Install dependencies
         run: go mod download
@@ -61,7 +61,7 @@ jobs:
             -v ${{ github.workspace }}:/workspace \
             -v $HOME/go/pkg/mod:/go/pkg/mod:ro \
             -w /workspace \
-            golang:1.22.4 go test -v -coverprofile=src/coverage.txt -covermode=atomic ./src/...
+            golang:1.25 go test -v -coverprofile=src/coverage.txt -covermode=atomic ./src/...
 
       - name: Run integration tests
         run: |
@@ -69,7 +69,7 @@ jobs:
             -v ${{ github.workspace }}:/workspace \
             -v $HOME/go/pkg/mod:/go/pkg/mod:ro \
             -w /workspace \
-            golang:1.22.4 go test -tags=integration -v -run TestPerformanceThreshold ./src
+            golang:1.25 go test -tags=integration -v -run TestPerformanceThreshold ./src
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5
@@ -90,7 +90,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: '1.22.4'
+          go-version: '1.25'
 
       - name: Generate repository URL
         run: cd src && go generate main.go

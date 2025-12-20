@@ -5,6 +5,8 @@ import (
 	"context"
 	"os"
 	"strings"
+
+	"github.com/erichs/dashlights/src/signals/internal/fileutil"
 )
 
 // NpmrcTokensSignal checks for auth tokens in .npmrc in the project root
@@ -57,19 +59,26 @@ func (s *NpmrcTokensSignal) Check(ctx context.Context) bool {
 	}
 
 	// Check if .npmrc exists in current directory
-	file, err := os.Open(".npmrc")
+	const maxNpmrcBytes = 128 * 1024
+
+	data, err := fileutil.ReadFileLimitedString(".npmrc", maxNpmrcBytes)
 	if err != nil {
 		// No .npmrc file in project root - good
 		return false
 	}
-	defer file.Close()
 
 	// Scan the first few lines for auth tokens
-	scanner := bufio.NewScanner(file)
+	scanner := bufio.NewScanner(strings.NewReader(data))
 	lineCount := 0
 	maxLines := 100 // Only scan first 100 lines for performance
 
 	for scanner.Scan() && lineCount < maxLines {
+		select {
+		case <-ctx.Done():
+			return false
+		default:
+		}
+
 		line := strings.TrimSpace(scanner.Text())
 		lineCount++
 

@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/erichs/dashlights/src/signals/internal/fileutil"
 	"github.com/erichs/dashlights/src/signals/internal/pathsec"
 )
 
@@ -95,13 +96,15 @@ func (s *MissingGitHooksSignal) Check(ctx context.Context) bool {
 
 // getHooksPath reads .git/config to find core.hooksPath, defaulting to .git/hooks
 func getHooksPath() string {
-	data, err := os.ReadFile(".git/config")
+	const maxGitConfigBytes = 64 * 1024
+
+	data, err := fileutil.ReadFileLimitedString(".git/config", maxGitConfigBytes)
 	if err != nil {
 		return ".git/hooks" // Default
 	}
 
 	// Parse the config file looking for hooksPath in [core] section
-	scanner := bufio.NewScanner(strings.NewReader(string(data)))
+	scanner := bufio.NewScanner(strings.NewReader(data))
 	inCoreSection := false
 
 	for scanner.Scan() {

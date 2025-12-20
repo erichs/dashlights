@@ -5,6 +5,8 @@ import (
 	"context"
 	"os"
 	"strings"
+
+	"github.com/erichs/dashlights/src/signals/internal/fileutil"
 )
 
 // CargoPathDepsSignal checks for path dependencies in Cargo.toml
@@ -51,17 +53,24 @@ func (s *CargoPathDepsSignal) Check(ctx context.Context) bool {
 	}
 
 	// Check if Cargo.toml exists in current directory
-	file, err := os.Open("Cargo.toml")
+	const maxCargoTomlBytes = 256 * 1024
+
+	data, err := fileutil.ReadFileLimitedString("Cargo.toml", maxCargoTomlBytes)
 	if err != nil {
 		// No Cargo.toml file - not a Rust project
 		return false
 	}
-	defer file.Close()
 
-	scanner := bufio.NewScanner(file)
+	scanner := bufio.NewScanner(strings.NewReader(data))
 	inDependenciesSection := false
 
 	for scanner.Scan() {
+		select {
+		case <-ctx.Done():
+			return false
+		default:
+		}
+
 		line := strings.TrimSpace(scanner.Text())
 
 		// Skip comments
