@@ -43,6 +43,11 @@ func IsDisabled() bool {
 	return os.Getenv("DASHLIGHTS_DISABLE_AGENTIC") != ""
 }
 
+// IsDebug returns true if debug mode is enabled via environment.
+func IsDebug() bool {
+	return os.Getenv("DASHLIGHTS_DEBUG") != ""
+}
+
 // GenerateOutput creates the appropriate hook output based on analysis results.
 // Returns (output, exitCode, stderrMessage).
 // - exitCode 0: allow (with optional systemMessage warning)

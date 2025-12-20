@@ -58,6 +58,30 @@ func TestIsDisabled(t *testing.T) {
 	}
 }
 
+func TestIsDebug(t *testing.T) {
+	// Save original value
+	original := os.Getenv("DASHLIGHTS_DEBUG")
+	defer os.Setenv("DASHLIGHTS_DEBUG", original)
+
+	tests := []struct {
+		envValue string
+		want     bool
+	}{
+		{"", false},
+		{"1", true},
+		{"true", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.envValue, func(t *testing.T) {
+			os.Setenv("DASHLIGHTS_DEBUG", tt.envValue)
+			if got := IsDebug(); got != tt.want {
+				t.Errorf("IsDebug() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestGenerateOutput_AllowSafe(t *testing.T) {
 	result := &AnalysisResult{
 		ToolName: "Read",

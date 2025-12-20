@@ -3,6 +3,7 @@ package agentic
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 )
 
@@ -163,7 +164,10 @@ func marshalCursorOutput(output CursorOutput) []byte {
 	jsonOut, err := json.Marshal(output)
 	if err != nil {
 		// This should never happen with a simple struct like CursorOutput,
-		// but return a valid allow response as fallback
+		// but log if debug mode is enabled and return a valid allow response
+		if IsDebug() {
+			fmt.Fprintf(os.Stderr, "debug: marshalCursorOutput failed: %v\n", err)
+		}
 		return []byte(`{"permission":"allow"}`)
 	}
 	return jsonOut

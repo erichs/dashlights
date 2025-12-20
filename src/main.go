@@ -74,6 +74,11 @@ func displayClearCodes(w io.Writer, lights *[]dashlight) {
 func main() {
 	arg.MustParse(&args)
 
+	// Propagate debug flag to environment for packages that need it
+	if args.DebugMode {
+		os.Setenv("DASHLIGHTS_DEBUG", "1")
+	}
+
 	// Agentic mode: completely different execution path for AI coding assistant hooks
 	if args.AgenticMode {
 		os.Exit(runAgenticMode())
