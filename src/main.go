@@ -76,7 +76,9 @@ func main() {
 
 	// Propagate debug flag to environment for packages that need it
 	if args.DebugMode {
-		os.Setenv("DASHLIGHTS_DEBUG", "1")
+		if err := os.Setenv("DASHLIGHTS_DEBUG", "1"); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: failed to set DASHLIGHTS_DEBUG: %v\n", err)
+		}
 	}
 
 	// Agentic mode: completely different execution path for AI coding assistant hooks
