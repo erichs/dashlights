@@ -35,7 +35,13 @@ When all three capabilities are combined in a single action, the risk of securit
 
 ### Claude Code
 
-Claude Code is the primary supported agent. Add to your `.claude/settings.json`:
+Claude Code is the primary supported agent. Recommended installer:
+
+```bash
+dashlights --installagent claude -y
+```
+
+Manual configuration (if you prefer to edit by hand):
 
 ```json
 {
@@ -59,7 +65,13 @@ Claude Code is the primary supported agent. Add to your `.claude/settings.json`:
 
 Cursor IDE is supported via the `beforeShellExecution` hook. Dashlights automatically detects Cursor input format and outputs the expected response format.
 
-**Configuration:** Create `.cursor/hooks.json` in your project or home directory:
+Recommended installer:
+
+```bash
+dashlights --installagent cursor -y
+```
+
+Manual configuration (if you prefer to edit by hand). Create `.cursor/hooks.json` in your project or home directory:
 
 ```json
 {
