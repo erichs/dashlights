@@ -16,6 +16,7 @@ import (
 
 	arg "github.com/alexflint/go-arg"
 	"github.com/erichs/dashlights/src/agentic"
+	"github.com/erichs/dashlights/src/install"
 	"github.com/erichs/dashlights/src/signals"
 	"github.com/fatih/color"
 )
@@ -41,12 +42,17 @@ type debugResult struct {
 }
 
 type cliArgs struct {
-	DetailsMode     bool `arg:"-d,--details,help:Show detailed diagnostic information for detected issues."`
-	VerboseMode     bool `arg:"-v,--verbose,help:Verbose mode: show documentation links in diagnostic output."`
-	ListCustomMode  bool `arg:"-l,--list-custom,help:List supported color attributes and emoji aliases for custom lights."`
-	ClearCustomMode bool `arg:"-c,--clear-custom,help:Shell code to clear custom DASHLIGHT_ environment variables."`
-	DebugMode       bool `arg:"--debug,help:Debug mode: disable timeouts and show detailed execution timing."`
-	AgenticMode     bool `arg:"--agentic,help:Agentic mode for AI coding assistants (reads JSON from stdin)."`
+	DetailsMode     bool   `arg:"-d,--details,help:Show detailed diagnostic information for detected issues."`
+	VerboseMode     bool   `arg:"-v,--verbose,help:Verbose mode: show documentation links in diagnostic output."`
+	ListCustomMode  bool   `arg:"-l,--list-custom,help:List supported color attributes and emoji aliases for custom lights."`
+	ClearCustomMode bool   `arg:"-c,--clear-custom,help:Shell code to clear custom DASHLIGHT_ environment variables."`
+	DebugMode       bool   `arg:"--debug,help:Debug mode: disable timeouts and show detailed execution timing."`
+	AgenticMode     bool   `arg:"--agentic,help:Agentic mode for AI coding assistants (reads JSON from stdin)."`
+	InstallPrompt   bool   `arg:"--installprompt,help:Install dashlights into shell prompt."`
+	InstallAgent    string `arg:"--installagent,help:Install dashlights hook into AI agent config (claude|cursor)."`
+	ConfigPath      string `arg:"--configpath,help:Override config file path (only for --installprompt)."`
+	Yes             bool   `arg:"-y,--yes,help:Non-interactive mode; auto-confirm all prompts."`
+	DryRun          bool   `arg:"--dry-run,help:Preview changes without applying them."`
 }
 
 // Version returns the version string for --version flag
@@ -79,6 +85,11 @@ func main() {
 		if err := os.Setenv("DASHLIGHTS_DEBUG", "1"); err != nil {
 			fmt.Fprintf(os.Stderr, "warning: failed to set DASHLIGHTS_DEBUG: %v\n", err)
 		}
+	}
+
+	// Install mode: handle --installprompt or --installagent
+	if args.InstallPrompt || args.InstallAgent != "" {
+		os.Exit(int(runInstallMode()))
 	}
 
 	// Agentic mode: completely different execution path for AI coding assistant hooks
@@ -698,4 +709,19 @@ func displayDebugInfo(w io.Writer, envStart, envEnd, sigStart, sigEnd time.Time,
 	}
 
 	flexPrintln(w, "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
+}
+
+// runInstallMode handles the --installprompt and --installagent flags.
+func runInstallMode() install.ExitCode {
+	installer := install.NewInstaller()
+
+	opts := install.InstallOptions{
+		InstallPrompt:      args.InstallPrompt,
+		InstallAgent:       args.InstallAgent,
+		ConfigPathOverride: args.ConfigPath,
+		NonInteractive:     args.Yes,
+		DryRun:             args.DryRun,
+	}
+
+	return installer.Run(opts)
 }

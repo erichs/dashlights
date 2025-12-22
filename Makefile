@@ -1,4 +1,4 @@
-.PHONY: all help build build-all test test-integration fmt fmt-check check-ctx clean install hooks coverage coverage-html coverage-signals gosec vet revive install-fabric-pattern release load-light load-medium load-heavy load stress-test
+.PHONY: all help build build-all test test-integration fmt fmt-check check-ctx clean install hooks coverage coverage-html coverage-signals gosec vet revive install-fabric-pattern release load-light load-medium load-heavy load stress-test docker-install-test
 
 # Detect Go bin directory portably
 GOBIN := $(shell go env GOBIN)
@@ -33,6 +33,7 @@ help:
 	@echo "  make load-medium       - Generate medium system load (Ctrl+C to stop)"
 	@echo "  make load-heavy        - Generate heavy system load (Ctrl+C to stop)"
 	@echo "  make stress-test       - Run dashlights repeatedly under load with stats"
+	@echo "  make docker-install-test - Run dockerized install test plan"
 	@echo "  make install-fabric-pattern - Install Fabric pattern for changelog generation"
 	@echo "  make release           - Create a new release with AI-generated changelog"
 
@@ -217,7 +218,7 @@ install-fabric-pattern:
 	@echo "✅ Fabric pattern installed to ~/.config/fabric/patterns/create_git_changelog/"
 
 # Create a new release with AI-generated changelog
-release:
+release: docker-install-test
 	@bash scripts/release.sh
 
 # Load testing targets
@@ -244,3 +245,5 @@ stress-test:
 	@echo "Stress testing dashlights..."
 	@bash scripts/stress-dashlights.sh
 
+docker-install-test:
+	@bash scripts/dockerized-install-test.sh

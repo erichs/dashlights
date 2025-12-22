@@ -105,107 +105,17 @@ make install
 
 ## Configure your PROMPT
 
-After installing dashlights, add it to your shell prompt to get continuous security monitoring.
-
-### Bash
-
-Add to your `~/.bashrc`:
+After installing dashlights, run the installer once. It detects bash, zsh, fish, and Powerlevel10k automatically.
 
 ```bash
-# Add dashlights to your prompt
-PS1='$(dashlights) '"$PS1"
+dashlights --installprompt
 ```
 
-### Zsh
-
-Add to your `~/.zshrc`:
-
-```bash
-# For left prompt (PROMPT)
-PROMPT='$(dashlights) '"$PROMPT"
-
-# Or for right prompt (RPROMPT)
-RPROMPT='$(dashlights)'
-```
-
-### oh-my-zsh
-
-Add to your `~/.zshrc` after the oh-my-zsh initialization:
-
-```bash
-# Source oh-my-zsh first
-source $ZSH/oh-my-zsh.sh
-
-# Then add dashlights to your prompt
-PROMPT='$(dashlights) '"$PROMPT"
-```
-
-### Powerlevel10k
-
-If you use Powerlevel10k, add dashlights as a custom prompt segment by editing your `~/.p10k.zsh` configuration file.
-
-#### Step 1: Define the custom segment function
-
-Add this function anywhere in your `~/.p10k.zsh` file (recommended: after the initial comments, before the main configuration block):
-
-```bash
-function prompt_dashlights() {
-  # Run dashlights and capture output
-  local content=$(dashlights 2>/dev/null)
-
-  # Only render the segment if dashlights returned output
-  if [[ -n $content ]]; then
-    p10k segment -t "$content"
-  fi
-}
-```
-
-#### Step 2: Add to your prompt elements
-
-Find the `POWERLEVEL9K_LEFT_PROMPT_ELEMENTS` array in your `~/.p10k.zsh` and add `dashlights` to it:
-
-```bash
-typeset -g POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(
-  # =========================[ Line #1 ]=========================
-  dir                       # current directory
-  vcs                       # git status
-  # =========================[ Line #2 ]=========================
-  newline                   # \n
-  dashlights                # <-- Add this line
-  prompt_char               # prompt symbol
-)
-```
-
-**Alternative**: Add to right prompt or second line:
-
-```bash
-typeset -g POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=(
-  # =========================[ Line #1 ]=========================
-  command_execution_time    # previous command duration
-  dashlights                # <-- Add here for right prompt
-  time                      # current time
-)
-```
-
-#### Step 3: Reload your configuration
-
-```bash
-source ~/.zshrc
-```
-
-**Note**: This approach keeps your `~/.zshrc` clean and follows Powerlevel10k best practices by keeping all prompt configuration in `~/.p10k.zsh`. The segment will only appear when dashlights detects security issues or custom dashboard lights.
-
-### Fish
-
-Add to your `~/.config/fish/config.fish`:
-
-```fish
-# Add dashlights to your prompt
-function fish_prompt
-    echo -n (dashlights)" "
-    # ... rest of your prompt configuration
-end
-```
+Tips:
+- Use `--yes` for non-interactive installs.
+- Use `--configpath` to target a specific config file (e.g., `~/.p10k.zsh`).
+- Use `--dry-run` to preview changes without modifying files.
+- Re-run any time; it is idempotent.
 
 ## Usage
 
@@ -314,8 +224,9 @@ Dashlights includes an `--agentic` mode for AI coding assistants like Claude Cod
 - **Rule of Two violations**: Actions combining untrusted input + sensitive access + state changes
 
 ```bash
-# Add to .claude/settings.json hooks
-"command": "dashlights --agentic"
+# Install agent hooks
+dashlights --installagent claude -y
+dashlights --installagent cursor -y
 ```
 
 👉 **[View the complete agentic mode documentation →](docs/agentic_mode.md)**
