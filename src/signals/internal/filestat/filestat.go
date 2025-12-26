@@ -81,7 +81,8 @@ func DefaultSensitivePatterns() SensitiveFilePatterns {
 			"backup-", // Common backup prefix
 		},
 		Substrings: []string{
-			"prod", // Production data indicators
+			"prod",       // Production data indicators (matched at word boundaries)
+			"production", // Full word also matches (e.g., "production-dump.sql")
 		},
 	}
 }
@@ -112,14 +113,48 @@ func (p *SensitiveFilePatterns) MatchFile(name string) bool {
 		}
 	}
 
-	// Check substrings
+	// Check substrings with word-boundary awareness
 	for _, substr := range p.Substrings {
-		if strings.Contains(lowerName, substr) {
+		if containsAtWordBoundary(lowerName, substr) {
 			return true
 		}
 	}
 
 	return false
+}
+
+// containsAtWordBoundary checks if substr appears in s at word boundaries.
+// Word boundaries are: start/end of string, or common delimiters (-_. and space).
+// This prevents "prod" from matching "product", "produce", etc.
+func containsAtWordBoundary(s, substr string) bool {
+	idx := 0
+	for {
+		pos := strings.Index(s[idx:], substr)
+		if pos == -1 {
+			return false
+		}
+		pos += idx // Adjust to absolute position
+
+		// Check if at word boundary
+		atStart := pos == 0 || isDelimiter(s[pos-1])
+		endPos := pos + len(substr)
+		atEnd := endPos == len(s) || isDelimiter(s[endPos])
+
+		if atStart && atEnd {
+			return true
+		}
+
+		// Move past this occurrence and keep searching
+		idx = pos + 1
+		if idx >= len(s) {
+			return false
+		}
+	}
+}
+
+// isDelimiter returns true if the byte is a common filename delimiter.
+func isDelimiter(b byte) bool {
+	return b == '-' || b == '_' || b == '.' || b == ' '
 }
 
 // ScanDirectory scans a directory for files matching the patterns.

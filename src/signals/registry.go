@@ -28,6 +28,7 @@ func GetAllSignals() []Signal {
 		NewInsecureCurlPipeSignal(),   // Shell history scan
 		NewSSHAgentBloatSignal(),      // Unix socket query
 		NewSSHKeysSignal(),            // File stat checks
+		NewSecureKeyboardSignal(),     // macOS only - plist read
 
 		// Repository hygiene signals
 		NewEnvNotIgnoredSignal(),       // Reads .gitignore
