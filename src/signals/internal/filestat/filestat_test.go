@@ -73,10 +73,21 @@ func TestMatchFile_Substrings(t *testing.T) {
 		filename string
 		want     bool
 	}{
+		// Should match - "prod" at word boundary
 		{"prod in name", "prod-data.csv", true},
 		{"PROD uppercase", "PROD_BACKUP.tar", true},
-		{"production", "production-dump.sql", true}, // contains "prod"
-		{"my-product", "my-product.csv", true},      // contains "prod"
+		{"prod at end", "data-prod.csv", true},
+		{"prod with dots", "my.prod.config", true},
+		{"prod standalone", "prod", true},
+		// Should match - "production" substring
+		{"production", "production-dump.sql", true},
+		{"production mid", "my-production-data.csv", true},
+		// Should NOT match - "prod" not at word boundary
+		{"product", "my-product.csv", false},
+		{"produce", "produce-list.txt", false},
+		{"prodded", "prodded-users.csv", false},
+		{"reproductive", "reproductive-data.csv", false},
+		// Other non-matches
 		{"dev file", "dev-data.csv", false},
 		{"test file", "test-data.csv", false},
 	}
@@ -315,3 +326,56 @@ func TestGetHotZoneDirectories(t *testing.T) {
 }
 
 // Note: Not using slices.Contains to avoid Go 1.21+ dependency
+
+func TestContainsAtWordBoundary(t *testing.T) {
+	tests := []struct {
+		name   string
+		s      string
+		substr string
+		want   bool
+	}{
+		// Basic matches
+		{"at start with delimiter", "prod-data", "prod", true},
+		{"at end with delimiter", "data-prod", "prod", true},
+		{"standalone", "prod", "prod", true},
+		{"with dots", "my.prod.config", "prod", true},
+		{"with underscores", "my_prod_data", "prod", true},
+		{"with spaces", "my prod data", "prod", true},
+		// Not at word boundary
+		{"product", "product", "prod", false},
+		{"production", "production", "prod", false},
+		{"reproduce", "reproduce", "prod", false},
+		{"my-product", "my-product", "prod", false},
+		// Multiple occurrences - should find the valid one
+		{"product then prod", "product-prod", "prod", true},
+		{"prod then product", "prod-product", "prod", true},
+		// Edge cases
+		{"empty string", "", "prod", false},
+		{"substr longer than s", "pr", "prod", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := containsAtWordBoundary(tt.s, tt.substr); got != tt.want {
+				t.Errorf("containsAtWordBoundary(%q, %q) = %v, want %v", tt.s, tt.substr, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestIsDelimiter(t *testing.T) {
+	delimiters := []byte{'-', '_', '.', ' '}
+	nonDelimiters := []byte{'a', 'z', 'A', 'Z', '0', '9', '/', '\\', '@'}
+
+	for _, b := range delimiters {
+		if !isDelimiter(b) {
+			t.Errorf("isDelimiter(%q) = false, want true", b)
+		}
+	}
+
+	for _, b := range nonDelimiters {
+		if isDelimiter(b) {
+			t.Errorf("isDelimiter(%q) = true, want false", b)
+		}
+	}
+}
