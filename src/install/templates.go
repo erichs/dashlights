@@ -75,6 +75,44 @@ func GetShellTemplate(templateType TemplateType) string {
 	}
 }
 
+// PATH export templates for adding ~/.local/bin to PATH.
+const (
+	// BashPathExport adds ~/.local/bin to PATH in bash.
+	BashPathExport = `# BEGIN dashlights-path
+# Added by dashlights installer
+export PATH="$HOME/.local/bin:$PATH"
+# END dashlights-path
+`
+
+	// ZshPathExport adds ~/.local/bin to PATH in zsh.
+	ZshPathExport = `# BEGIN dashlights-path
+# Added by dashlights installer
+export PATH="$HOME/.local/bin:$PATH"
+# END dashlights-path
+`
+
+	// FishPathExport adds ~/.local/bin to PATH in fish.
+	FishPathExport = `# BEGIN dashlights-path
+# Added by dashlights installer
+fish_add_path $HOME/.local/bin
+# END dashlights-path
+`
+)
+
+// GetPathExportTemplate returns the PATH export template for a shell type.
+func GetPathExportTemplate(shell ShellType) string {
+	switch shell {
+	case ShellBash:
+		return BashPathExport
+	case ShellZsh:
+		return ZshPathExport
+	case ShellFish:
+		return FishPathExport
+	default:
+		return ""
+	}
+}
+
 // Agent configuration templates.
 const (
 	// ClaudeHookJSON is the hook configuration to add to Claude's settings.
