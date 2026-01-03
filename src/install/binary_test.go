@@ -6,6 +6,123 @@ import (
 	"testing"
 )
 
+func TestIsNonPreferredHomebrewDir(t *testing.T) {
+	tests := []struct {
+		dir      string
+		expected bool
+	}{
+		{"/opt/homebrew/bin", false},                    // acceptable
+		{"/opt/homebrew/lib/ruby/gems/3.3.0/bin", true}, // non-preferred
+		{"/opt/homebrew/opt/openjdk@21/bin", true},      // non-preferred
+		{"/opt/homebrew/Cellar/python@3.11/bin", true},  // non-preferred
+		{"/usr/local/bin", false},                       // not homebrew
+		{"/home/user/bin", false},                       // not homebrew
+		{"/opt/homebrew", false},                        // just prefix, not a subdir
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.dir, func(t *testing.T) {
+			result := isNonPreferredHomebrewDir(tt.dir)
+			if result != tt.expected {
+				t.Errorf("isNonPreferredHomebrewDir(%q) = %v, want %v", tt.dir, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestBinaryInstaller_FindExistingDashlightsInPath(t *testing.T) {
+	fs := NewMockFilesystem()
+	fs.PathEnv = "/usr/bin:/home/testuser/bin:/usr/local/bin"
+	// Simulate dashlights existing in /home/testuser/bin
+	fs.Files["/home/testuser/bin/dashlights"] = []byte("binary")
+
+	bi := NewBinaryInstaller(fs)
+	existingDir := bi.findExistingDashlightsInPath()
+
+	if existingDir != "/home/testuser/bin" {
+		t.Errorf("expected /home/testuser/bin, got %s", existingDir)
+	}
+}
+
+func TestBinaryInstaller_FindExistingDashlightsInPath_NotFound(t *testing.T) {
+	fs := NewMockFilesystem()
+	fs.PathEnv = "/usr/bin:/home/testuser/bin:/usr/local/bin"
+	// No dashlights binary exists
+
+	bi := NewBinaryInstaller(fs)
+	existingDir := bi.findExistingDashlightsInPath()
+
+	if existingDir != "" {
+		t.Errorf("expected empty string, got %s", existingDir)
+	}
+}
+
+func TestBinaryInstaller_FindInstallDir_RespectsExistingLocation(t *testing.T) {
+	fs := NewMockFilesystem()
+	// Dashlights already exists in /usr/local/bin (even though it's a system dir)
+	fs.PathEnv = "/home/testuser/bin:/usr/local/bin:/usr/bin"
+	fs.Files["/usr/local/bin/dashlights"] = []byte("existing binary")
+	fs.WritableDirs["/home/testuser/bin"] = true
+
+	bi := NewBinaryInstaller(fs)
+	dir, needsExport, err := bi.FindInstallDir()
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Should use existing location even though /home/testuser/bin is writable
+	if dir != "/usr/local/bin" {
+		t.Errorf("expected /usr/local/bin (existing location), got %s", dir)
+	}
+	if needsExport {
+		t.Error("expected needsExport=false for existing location")
+	}
+}
+
+func TestBinaryInstaller_FindInstallDir_SkipsHomebrewSubdirs(t *testing.T) {
+	fs := NewMockFilesystem()
+	// PATH has homebrew subdirs before the preferred dir
+	fs.PathEnv = "/opt/homebrew/lib/ruby/gems/3.3.0/bin:/opt/homebrew/opt/openjdk@21/bin:/home/testuser/bin"
+	fs.WritableDirs["/opt/homebrew/lib/ruby/gems/3.3.0/bin"] = true
+	fs.WritableDirs["/opt/homebrew/opt/openjdk@21/bin"] = true
+	fs.WritableDirs["/home/testuser/bin"] = true
+
+	bi := NewBinaryInstaller(fs)
+	dir, needsExport, err := bi.FindInstallDir()
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Should skip homebrew subdirs and use /home/testuser/bin
+	if dir != "/home/testuser/bin" {
+		t.Errorf("expected /home/testuser/bin (skipping homebrew subdirs), got %s", dir)
+	}
+	if needsExport {
+		t.Error("expected needsExport=false")
+	}
+}
+
+func TestBinaryInstaller_FindInstallDir_AllowsHomebrewBin(t *testing.T) {
+	fs := NewMockFilesystem()
+	// PATH has /opt/homebrew/bin which should be allowed
+	fs.PathEnv = "/opt/homebrew/bin:/usr/bin"
+	fs.WritableDirs["/opt/homebrew/bin"] = true
+
+	bi := NewBinaryInstaller(fs)
+	dir, needsExport, err := bi.FindInstallDir()
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Should use /opt/homebrew/bin (it's acceptable)
+	if dir != "/opt/homebrew/bin" {
+		t.Errorf("expected /opt/homebrew/bin, got %s", dir)
+	}
+	if needsExport {
+		t.Error("expected needsExport=false")
+	}
+}
+
 func TestBinaryInstaller_FindInstallDir_WritableInPath(t *testing.T) {
 	fs := NewMockFilesystem()
 	fs.PathEnv = "/usr/bin:/home/testuser/bin:/usr/local/bin"

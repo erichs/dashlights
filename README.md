@@ -105,14 +105,35 @@ make install
 
 ## Configure your PROMPT
 
-After installing dashlights, run the installer once. It detects bash, zsh, fish, and Powerlevel10k automatically.
+After downloading dashlights, run the unified installer to set up everything at once:
 
 ```bash
-dashlights --installprompt
+./dashlights --install
+```
+
+This will:
+1. Install the binary to a sensible location in your PATH
+2. Configure your shell prompt (bash, zsh, fish, or Powerlevel10k)
+3. Set up AI agent hooks if Claude Code or Cursor are detected
+
+### Binary Installation Location
+
+The installer selects a binary location using this priority:
+1. **Existing location** - If dashlights is already in your PATH, it updates that location
+2. **User-writable PATH directory** - First writable directory in PATH (excluding system dirs and non-preferred homebrew subdirectories)
+3. **Fallback** - `~/.local/bin` (created and added to PATH if needed)
+
+### Install Options
+
+```bash
+dashlights --install         # Full installation (binary + prompt + detected agents)
+dashlights --installprompt   # Shell prompt only
+dashlights --installagent claude   # Claude Code agent hooks only
+dashlights --installagent cursor   # Cursor agent hooks only
 ```
 
 Tips:
-- Use `--yes` for non-interactive installs.
+- Use `--yes` or `-y` for non-interactive installs.
 - Use `--configpath` to target a specific config file (e.g., `~/.p10k.zsh`).
 - Use `--dry-run` to preview changes without modifying files.
 - Re-run any time; it is idempotent.

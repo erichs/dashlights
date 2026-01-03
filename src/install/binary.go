@@ -40,6 +40,12 @@ const DefaultBinDir = ".local/bin"
 // System directories that should be skipped for user installs.
 var systemDirs = []string{"/usr/bin", "/usr/local/bin", "/bin", "/sbin", "/usr/sbin"}
 
+// homebrewBinDir is the acceptable homebrew bin directory.
+const homebrewBinDir = "/opt/homebrew/bin"
+
+// homebrewPrefix is the prefix for homebrew directories that should be filtered out.
+const homebrewPrefix = "/opt/homebrew/"
+
 // BinaryInstaller handles installation of the dashlights binary to PATH.
 type BinaryInstaller struct {
 	fs     Filesystem
@@ -111,7 +117,27 @@ func (b *BinaryInstaller) resolveSymlinks(path string) (string, error) {
 	return path, nil
 }
 
-// FindInstallDir finds the first writable directory in PATH, or falls back to ~/.local/bin.
+// findExistingDashlightsInPath checks if dashlights binary already exists somewhere in PATH.
+// Returns the directory path if found, empty string otherwise.
+func (b *BinaryInstaller) findExistingDashlightsInPath() string {
+	pathDirs := b.fs.SplitPath()
+	for _, dir := range pathDirs {
+		if dir == "" {
+			continue
+		}
+		binaryPath := filepath.Join(dir, "dashlights")
+		if b.fs.Exists(binaryPath) {
+			return dir
+		}
+	}
+	return ""
+}
+
+// FindInstallDir finds the best directory to install the binary to.
+// Priority:
+// 1. If dashlights already exists somewhere in PATH, use that location
+// 2. First user-writable directory in PATH (excluding system dirs and non-preferred homebrew subdirs)
+// 3. Fallback to ~/.local/bin
 func (b *BinaryInstaller) FindInstallDir() (string, bool, error) {
 	pathDirs := b.fs.SplitPath()
 
@@ -121,7 +147,15 @@ func (b *BinaryInstaller) FindInstallDir() (string, bool, error) {
 	}
 	localBin := filepath.Join(homeDir, DefaultBinDir)
 
-	// Check each directory left-to-right for writability
+	// Priority 1: If dashlights already exists in PATH, use that location
+	// (even if it requires sudo - we respect user's prior choice)
+	existingDir := b.findExistingDashlightsInPath()
+	if existingDir != "" {
+		return existingDir, false, nil
+	}
+
+	// Priority 2: First user-writable directory in PATH
+	// Skip system directories and non-preferred homebrew subdirectories
 	for _, dir := range pathDirs {
 		if dir == "" {
 			continue
@@ -132,13 +166,18 @@ func (b *BinaryInstaller) FindInstallDir() (string, bool, error) {
 			continue
 		}
 
+		// Skip non-preferred homebrew subdirectories (but allow /opt/homebrew/bin)
+		if isNonPreferredHomebrewDir(dir) {
+			continue
+		}
+
 		// Check if writable
 		if b.fs.IsWritable(dir) {
 			return dir, false, nil
 		}
 	}
 
-	// No writable directory found in PATH
+	// Priority 3: Fall back to ~/.local/bin
 	// Check if ~/.local/bin is already in PATH
 	for _, dir := range pathDirs {
 		if dir == localBin {
@@ -159,6 +198,16 @@ func isSystemDir(dir string) bool {
 		}
 	}
 	return false
+}
+
+// isNonPreferredHomebrewDir checks if a directory is a homebrew subdirectory
+// that should be filtered out (e.g., /opt/homebrew/lib/ruby/gems/3.3.0/bin).
+// Returns false for /opt/homebrew/bin which is acceptable.
+func isNonPreferredHomebrewDir(dir string) bool {
+	if dir == homebrewBinDir {
+		return false // /opt/homebrew/bin is acceptable
+	}
+	return strings.HasPrefix(dir, homebrewPrefix)
 }
 
 // CheckBinaryState checks if the binary is already installed and its state.
