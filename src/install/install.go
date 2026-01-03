@@ -340,12 +340,12 @@ func (i *Installer) runUnifiedInstall(opts InstallOptions) ExitCode {
 		// Claude Code (if ~/.claude exists)
 		claudeDir := filepath.Join(homeDir, ".claude")
 		if i.fs.Exists(claudeDir) {
-			config, err := i.agentInstall.GetAgentConfig(AgentClaude)
+			claudeConfig, err := i.agentInstall.GetAgentConfig(AgentClaude)
 			if err != nil {
 				warnings = append(warnings, fmt.Sprintf("Claude config error: %v", err))
 			} else {
 				action := "Add PreToolUse hook"
-				if installed, installErr := i.agentInstall.IsInstalled(config); installErr != nil {
+				if installed, installErr := i.agentInstall.IsInstalled(claudeConfig); installErr != nil {
 					warnings = append(warnings, fmt.Sprintf("Claude install check failed: %v", installErr))
 				} else if installed {
 					action = "Already installed"
@@ -354,9 +354,9 @@ func (i *Installer) runUnifiedInstall(opts InstallOptions) ExitCode {
 				components = append(components, installComponent{
 					name:       "Claude Code",
 					action:     action,
-					targetPath: config.ConfigPath,
+					targetPath: claudeConfig.ConfigPath,
 					execute: func() (*InstallResult, error) {
-						return i.agentInstall.Install(config, opts.DryRun, opts.NonInteractive)
+						return i.agentInstall.Install(claudeConfig, opts.DryRun, opts.NonInteractive)
 					},
 				})
 			}
@@ -365,18 +365,18 @@ func (i *Installer) runUnifiedInstall(opts InstallOptions) ExitCode {
 		// Cursor (if ~/.cursor exists)
 		cursorDir := filepath.Join(homeDir, ".cursor")
 		if i.fs.Exists(cursorDir) {
-			config, err := i.agentInstall.GetAgentConfig(AgentCursor)
+			cursorConfig, err := i.agentInstall.GetAgentConfig(AgentCursor)
 			if err != nil {
 				warnings = append(warnings, fmt.Sprintf("Cursor config error: %v", err))
 			} else {
 				action := "Add beforeShellExecution hook"
-				if installed, installErr := i.agentInstall.IsInstalled(config); installErr != nil {
+				if installed, installErr := i.agentInstall.IsInstalled(cursorConfig); installErr != nil {
 					warnings = append(warnings, fmt.Sprintf("Cursor install check failed: %v", installErr))
 				} else if installed {
 					action = "Already installed"
 				} else {
 					// Check for conflict
-					existingCmd, hasConflict, conflictErr := i.agentInstall.CheckCursorConflict(config)
+					existingCmd, hasConflict, conflictErr := i.agentInstall.CheckCursorConflict(cursorConfig)
 					if conflictErr != nil {
 						warnings = append(warnings, fmt.Sprintf("Cursor conflict check failed: %v", conflictErr))
 					} else if hasConflict {
@@ -387,9 +387,9 @@ func (i *Installer) runUnifiedInstall(opts InstallOptions) ExitCode {
 				components = append(components, installComponent{
 					name:       "Cursor",
 					action:     action,
-					targetPath: config.ConfigPath,
+					targetPath: cursorConfig.ConfigPath,
 					execute: func() (*InstallResult, error) {
-						return i.agentInstall.Install(config, opts.DryRun, opts.NonInteractive)
+						return i.agentInstall.Install(cursorConfig, opts.DryRun, opts.NonInteractive)
 					},
 				})
 			}

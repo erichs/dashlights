@@ -3,6 +3,7 @@ package install
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -498,10 +499,10 @@ func TestBinaryInstaller_AddPathExport_Success(t *testing.T) {
 
 	// Verify PATH export was added
 	content := string(fs.Files["/home/testuser/.bashrc"])
-	if !contains(content, PathSentinelBegin) {
+	if !strings.Contains(content, PathSentinelBegin) {
 		t.Error("PATH export sentinel not found in config")
 	}
-	if !contains(content, "export PATH=") {
+	if !strings.Contains(content, "export PATH=") {
 		t.Error("PATH export statement not found in config")
 	}
 }
@@ -681,28 +682,15 @@ func TestGetPathExportTemplate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(string(tt.shell), func(t *testing.T) {
 			template := GetPathExportTemplate(tt.shell)
-			if !contains(template, tt.contains) {
+			if !strings.Contains(template, tt.contains) {
 				t.Errorf("template for %s should contain %q", tt.shell, tt.contains)
 			}
-			if !contains(template, PathSentinelBegin) {
+			if !strings.Contains(template, PathSentinelBegin) {
 				t.Error("template should contain begin sentinel")
 			}
-			if !contains(template, PathSentinelEnd) {
+			if !strings.Contains(template, PathSentinelEnd) {
 				t.Error("template should contain end sentinel")
 			}
 		})
 	}
-}
-
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsHelper(s, substr))
-}
-
-func containsHelper(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }
