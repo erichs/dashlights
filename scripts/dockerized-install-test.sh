@@ -4,7 +4,8 @@ set -euo pipefail
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 IMAGE="${IMAGE:-golang:1.25-rc-bullseye}"
 
-docker run --rm -it \
+TTY_FLAG="${TTY_FLAG:--it}"
+docker run --rm $TTY_FLAG \
   -v "${REPO_DIR}:/work:ro" \
   -w /work \
   "${IMAGE}" \
@@ -18,8 +19,10 @@ apt-get update
 apt-get install -y zsh fish ripgrep util-linux
 
 echo "STEP: build dashlights"
-go build -o /tmp/dashlights ./src
-export PATH="/tmp:$PATH"
+mkdir -p /opt/dashlights-build
+go build -o /opt/dashlights-build/dashlights ./src
+export PATH="/opt/dashlights-build:$PATH"
+DASHLIGHTS_BIN="/opt/dashlights-build/dashlights"
 
 fail() {
   echo "FAIL: $*" >&2
@@ -92,6 +95,196 @@ begin_test "version check"
 output="$(expect_success "version check" dashlights --version)"
 assert_contains "$output" "dashlights"
 end_test
+
+# ============================================================
+# Binary Installation Tests
+# ============================================================
+
+begin_test "binary install to writable PATH dir"
+reset_home
+export SHELL="/bin/bash"
+mkdir -p "$HOME/bin"
+export PATH="$HOME/bin:/usr/bin:/bin"
+echo 'export BASH_TEST=1' > "$HOME/.bashrc"
+output="$(expect_success "binary install" "$DASHLIGHTS_BIN" --install -y)"
+test -f "$HOME/bin/dashlights" || fail "Expected binary to be installed to ~/bin"
+test -x "$HOME/bin/dashlights" || fail "Expected binary to be executable"
+end_test
+
+begin_test "binary install respects existing PATH location"
+reset_home
+export SHELL="/bin/bash"
+mkdir -p "$HOME/bin" "$HOME/other-bin"
+echo '#!/bin/sh' > "$HOME/other-bin/dashlights"
+echo 'echo old' >> "$HOME/other-bin/dashlights"
+chmod +x "$HOME/other-bin/dashlights"
+export PATH="$HOME/bin:$HOME/other-bin:/usr/bin:/bin"
+echo 'export BASH_TEST=1' > "$HOME/.bashrc"
+output="$(expect_success "respect existing" "$DASHLIGHTS_BIN" --install -y)"
+test -x "$HOME/other-bin/dashlights" || fail "Expected binary to be updated in existing location"
+"$HOME/other-bin/dashlights" --version >/dev/null || fail "Updated binary should work"
+end_test
+
+begin_test "binary install skips homebrew subdirs"
+reset_home
+export SHELL="/bin/bash"
+mkdir -p "$HOME/preferred-bin"
+mkdir -p "/opt/homebrew/lib/ruby/gems/3.3.0/bin"
+chmod 777 "/opt/homebrew/lib/ruby/gems/3.3.0/bin"
+export PATH="/opt/homebrew/lib/ruby/gems/3.3.0/bin:$HOME/preferred-bin:/usr/bin:/bin"
+echo 'export BASH_TEST=1' > "$HOME/.bashrc"
+output="$(expect_success "skip homebrew subdirs" "$DASHLIGHTS_BIN" --install -y)"
+test -f "$HOME/preferred-bin/dashlights" || fail "Expected binary in preferred-bin"
+test ! -f "/opt/homebrew/lib/ruby/gems/3.3.0/bin/dashlights" || fail "Should NOT install to homebrew subdir"
+end_test
+
+begin_test "binary install allows /opt/homebrew/bin"
+reset_home
+export SHELL="/bin/bash"
+mkdir -p "/opt/homebrew/bin"
+chmod 777 "/opt/homebrew/bin"
+export PATH="/opt/homebrew/bin:/usr/bin:/bin"
+echo 'export BASH_TEST=1' > "$HOME/.bashrc"
+output="$(expect_success "allow homebrew bin" "$DASHLIGHTS_BIN" --install -y)"
+test -f "/opt/homebrew/bin/dashlights" || fail "Expected binary in /opt/homebrew/bin"
+end_test
+
+begin_test "binary install fallback to .local/bin"
+reset_home
+export SHELL="/bin/bash"
+export PATH="/usr/bin:/bin:/usr/local/bin"
+echo 'export BASH_TEST=1' > "$HOME/.bashrc"
+output="$(expect_success "binary fallback" "$DASHLIGHTS_BIN" --install -y)"
+test -f "$HOME/.local/bin/dashlights" || fail "Expected binary at ~/.local/bin/dashlights"
+assert_file_contains "$HOME/.bashrc" "# BEGIN dashlights-path"
+assert_file_contains "$HOME/.bashrc" ".local/bin"
+end_test
+
+begin_test "binary install idempotency"
+reset_home
+export SHELL="/bin/bash"
+mkdir -p "$HOME/bin"
+export PATH="$HOME/bin:/usr/bin:/bin"
+echo 'export BASH_TEST=1' > "$HOME/.bashrc"
+"$DASHLIGHTS_BIN" --install -y >/dev/null
+first_hash="$(sha256sum "$HOME/bin/dashlights" | awk '{print $1}')"
+output="$(expect_success "binary idempotency" "$DASHLIGHTS_BIN" --install -y)"
+second_hash="$(sha256sum "$HOME/bin/dashlights" | awk '{print $1}')"
+test "$first_hash" = "$second_hash" || fail "Binary should not change on idempotent install"
+end_test
+
+begin_test "binary update older version"
+reset_home
+export SHELL="/bin/bash"
+mkdir -p "$HOME/bin"
+export PATH="$HOME/bin:/usr/bin:/bin"
+echo 'export BASH_TEST=1' > "$HOME/.bashrc"
+echo '#!/bin/sh' > "$HOME/bin/dashlights"
+echo 'echo old-version' >> "$HOME/bin/dashlights"
+chmod +x "$HOME/bin/dashlights"
+old_hash="$(sha256sum "$HOME/bin/dashlights" | awk '{print $1}')"
+output="$(expect_success "binary update" "$DASHLIGHTS_BIN" --install -y)"
+assert_contains "$output" "Updated binary" || assert_contains "$output" "Installed"
+new_hash="$(sha256sum "$HOME/bin/dashlights" | awk '{print $1}')"
+test "$old_hash" != "$new_hash" || fail "Binary should have been updated"
+test -f "$HOME/bin/dashlights.dashlights-backup" || fail "Expected backup of old binary"
+"$HOME/bin/dashlights" --version >/dev/null || fail "Updated binary should be functional"
+end_test
+
+begin_test "PATH export idempotency"
+reset_home
+export SHELL="/bin/bash"
+export PATH="/usr/bin:/bin"
+echo 'export BASH_TEST=1' > "$HOME/.bashrc"
+"$DASHLIGHTS_BIN" --install -y >/dev/null
+count1="$(grep -c "BEGIN dashlights-path" "$HOME/.bashrc")"
+"$DASHLIGHTS_BIN" --install -y >/dev/null
+count2="$(grep -c "BEGIN dashlights-path" "$HOME/.bashrc")"
+test "$count1" = "$count2" || fail "PATH export should not be duplicated"
+test "$count1" = "1" || fail "Expected exactly one PATH export block"
+end_test
+
+# ============================================================
+# Unified --install Tests
+# ============================================================
+
+begin_test "unified install with no agents"
+reset_home
+export SHELL="/bin/bash"
+mkdir -p "$HOME/bin"
+export PATH="$HOME/bin:/usr/bin:/bin"
+echo 'export BASH_TEST=1' > "$HOME/.bashrc"
+output="$(expect_success "unified install no agents" "$DASHLIGHTS_BIN" --install -y)"
+assert_contains "$output" "Binary:"
+assert_contains "$output" "Shell Prompt:"
+test -f "$HOME/bin/dashlights" || fail "Expected binary installed"
+assert_file_contains "$HOME/.bashrc" "# BEGIN dashlights"
+end_test
+
+begin_test "unified install with claude"
+reset_home
+export SHELL="/bin/bash"
+mkdir -p "$HOME/bin" "$HOME/.claude"
+export PATH="$HOME/bin:/usr/bin:/bin"
+echo 'export BASH_TEST=1' > "$HOME/.bashrc"
+output="$(expect_success "unified install with claude" "$DASHLIGHTS_BIN" --install -y)"
+assert_contains "$output" "Claude Code:"
+assert_file_contains "$HOME/.claude/settings.json" "dashlights --agentic"
+end_test
+
+begin_test "unified install with cursor"
+reset_home
+export SHELL="/bin/bash"
+mkdir -p "$HOME/bin" "$HOME/.cursor"
+export PATH="$HOME/bin:/usr/bin:/bin"
+echo 'export BASH_TEST=1' > "$HOME/.bashrc"
+output="$(expect_success "unified install with cursor" "$DASHLIGHTS_BIN" --install -y)"
+assert_contains "$output" "Cursor:"
+assert_file_contains "$HOME/.cursor/hooks.json" "dashlights --agentic"
+end_test
+
+begin_test "unified install with both agents"
+reset_home
+export SHELL="/bin/bash"
+mkdir -p "$HOME/bin" "$HOME/.claude" "$HOME/.cursor"
+export PATH="$HOME/bin:/usr/bin:/bin"
+echo 'export BASH_TEST=1' > "$HOME/.bashrc"
+output="$(expect_success "unified install both agents" "$DASHLIGHTS_BIN" --install -y)"
+assert_contains "$output" "Claude Code:"
+assert_contains "$output" "Cursor:"
+assert_file_contains "$HOME/.claude/settings.json" "dashlights --agentic"
+assert_file_contains "$HOME/.cursor/hooks.json" "dashlights --agentic"
+end_test
+
+begin_test "unified install dry run"
+reset_home
+export SHELL="/bin/bash"
+mkdir -p "$HOME/bin" "$HOME/.claude"
+export PATH="$HOME/bin:/usr/bin:/bin"
+echo 'export BASH_TEST=1' > "$HOME/.bashrc"
+output="$(expect_success "unified dry run" "$DASHLIGHTS_BIN" --install --dry-run)"
+assert_contains "$output" "DRY RUN"
+test ! -f "$HOME/bin/dashlights" || fail "Dry run should not install binary"
+test ! -f "$HOME/.claude/settings.json" || fail "Dry run should not create agent config"
+end_test
+
+begin_test "unified install idempotency"
+reset_home
+export SHELL="/bin/bash"
+mkdir -p "$HOME/bin" "$HOME/.claude"
+export PATH="$HOME/bin:/usr/bin:/bin"
+echo 'export BASH_TEST=1' > "$HOME/.bashrc"
+"$DASHLIGHTS_BIN" --install -y >/dev/null
+output="$(expect_success "unified idempotency" "$DASHLIGHTS_BIN" --install -y)"
+assert_contains "$output" "already"
+end_test
+
+# ============================================================
+# Shell Prompt Installation Tests
+# ============================================================
+
+# Restore PATH to include the build directory for prompt tests
+export PATH="/opt/dashlights-build:$PATH"
 
 begin_test "bash install"
 reset_home

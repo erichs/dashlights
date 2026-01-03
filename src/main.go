@@ -48,6 +48,7 @@ type cliArgs struct {
 	ClearCustomMode bool   `arg:"-c,--clear-custom,help:Shell code to clear custom DASHLIGHT_ environment variables."`
 	DebugMode       bool   `arg:"--debug,help:Debug mode: disable timeouts and show detailed execution timing."`
 	AgenticMode     bool   `arg:"--agentic,help:Agentic mode for AI coding assistants (reads JSON from stdin)."`
+	Install         bool   `arg:"--install,help:Install dashlights (binary + prompt + detected AI agents)."`
 	InstallPrompt   bool   `arg:"--installprompt,help:Install dashlights into shell prompt."`
 	InstallAgent    string `arg:"--installagent,help:Install dashlights hook into AI agent config (claude|cursor)."`
 	ConfigPath      string `arg:"--configpath,help:Override config file path (only for --installprompt)."`
@@ -87,8 +88,8 @@ func main() {
 		}
 	}
 
-	// Install mode: handle --installprompt or --installagent
-	if args.InstallPrompt || args.InstallAgent != "" {
+	// Install mode: handle --install, --installprompt, or --installagent
+	if args.Install || args.InstallPrompt || args.InstallAgent != "" {
 		os.Exit(int(runInstallMode()))
 	}
 
@@ -711,11 +712,12 @@ func displayDebugInfo(w io.Writer, envStart, envEnd, sigStart, sigEnd time.Time,
 	flexPrintln(w, "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
 }
 
-// runInstallMode handles the --installprompt and --installagent flags.
+// runInstallMode handles the --install, --installprompt, and --installagent flags.
 func runInstallMode() install.ExitCode {
 	installer := install.NewInstaller()
 
 	opts := install.InstallOptions{
+		InstallAll:         args.Install,
 		InstallPrompt:      args.InstallPrompt,
 		InstallAgent:       args.InstallAgent,
 		ConfigPathOverride: args.ConfigPath,
