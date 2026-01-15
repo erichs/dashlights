@@ -11,19 +11,20 @@ import (
 )
 
 // Performance limits for sensitive file scanning.
-// These cap worst-case behavior when scanning large directories.
+// These provide defaults for callers that don't specify their own config.
+// Callers can use time-based gating (via context deadline) instead of entry limits.
 const (
 	// maxMatchesPerDir limits how many files to stat per directory.
 	// After this many matches, we've proven the directory has issues.
 	maxMatchesPerDir = 10
 
-	// maxEntriesPerDir limits directory entries to process before giving up.
-	// Handles pathological cases like /tmp with thousands of files.
-	maxEntriesPerDir = 500
+	// maxEntriesPerDir is the default entry limit for backwards compatibility.
+	// Set to 0 in ScanConfig to disable and use time-based gating instead.
+	maxEntriesPerDir = 0
 
-	// perDirTimeout is the maximum time budget for scanning a single directory.
-	// With 4 hot zones, allows ~8ms total leaving 2ms buffer for 10ms budget.
-	perDirTimeout = 2 * time.Millisecond
+	// perDirTimeout is the default per-directory timeout.
+	// Set to 0 in ScanConfig to use caller's context deadline instead.
+	perDirTimeout = 0
 )
 
 // ScanConfig contains configuration for directory scanning.
@@ -229,6 +230,15 @@ func (p *SensitiveFilePatterns) ScanDirectory(ctx context.Context, dirPath strin
 		info, err := entry.Info()
 		if err != nil {
 			continue // Skip files we can't stat
+		}
+
+		// Check context again after expensive syscall for responsive timeout
+		select {
+		case <-scanCtx.Done():
+			result.Truncated = true
+			result.Reason = "timeout"
+			return result, nil
+		default:
 		}
 
 		// Skip non-regular files (symlinks, devices, etc.)
