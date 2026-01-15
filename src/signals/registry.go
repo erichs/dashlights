@@ -57,7 +57,6 @@ func GetAllSignals() []Signal {
 		NewDangerousTFVarSignal(),      // Env var check
 
 		// Data sprawl signals
-		NewDumpsterFireSignal(),   // Directory scan for sensitive files
-		NewRottingSecretsSignal(), // Old sensitive files detection
+		NewDumpsterFireSignal(), // Directory scan for sensitive files
 	}
 }

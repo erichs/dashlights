@@ -5,9 +5,14 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/erichs/dashlights/src/signals/internal/filestat"
 )
+
+// dumpsterFireBudget is the total time budget for scanning all hot zones.
+// With parallel scanning, this is wall-clock time, not cumulative.
+const dumpsterFireBudget = 8 * time.Millisecond
 
 // DumpsterFireSignal detects sensitive-looking files in user "hot zones"
 // where data sprawl commonly accumulates: Downloads, Desktop, $PWD, and /tmp.
@@ -48,7 +53,16 @@ func (s *DumpsterFireSignal) Remediation() string {
 	return "Review and remove/secure database dumps, logs, and key files from these locations"
 }
 
+// dirScanResult holds results from scanning a single directory.
+type dirScanResult struct {
+	dir    string
+	result filestat.ScanResult
+	err    error
+}
+
 // Check scans hot-zone directories for sensitive-looking files.
+// Directories are scanned in parallel with a global 8ms time budget.
+// This is adaptive: fast systems scan more entries, slow systems scan fewer.
 func (s *DumpsterFireSignal) Check(ctx context.Context) bool {
 	// Check if this signal is disabled via environment variable
 	if os.Getenv("DASHLIGHTS_DISABLE_DUMPSTER_FIRE") != "" {
@@ -59,41 +73,61 @@ func (s *DumpsterFireSignal) Check(ctx context.Context) bool {
 	s.dirCounts = make(map[string]int)
 	s.foundPaths = nil
 
+	// Create a time-budgeted context for all parallel scans
+	scanCtx, cancel := context.WithTimeout(ctx, dumpsterFireBudget)
+	defer cancel()
+
 	patterns := filestat.DefaultSensitivePatterns()
 	dirs := filestat.GetHotZoneDirectories()
-	config := filestat.DefaultScanConfig()
+
+	// Use time-based config: no entry limits, just the context deadline
+	config := filestat.ScanConfig{
+		MaxMatches: 10, // Still cap matches per directory (we've proven the point)
+		MaxEntries: 0,  // No entry limit - use time budget instead
+		Timeout:    0,  // No per-dir timeout - use global budget via context
+	}
+
+	// Launch parallel scans for all directories
+	resultCh := make(chan dirScanResult, len(dirs))
+
+	for _, dir := range dirs {
+		go func(d string) {
+			// Skip directories that don't exist
+			if _, err := os.Stat(d); os.IsNotExist(err) {
+				resultCh <- dirScanResult{d, filestat.ScanResult{}, err}
+				return
+			}
+
+			result, err := patterns.ScanDirectory(scanCtx, d, config)
+			resultCh <- dirScanResult{d, result, err}
+		}(dir)
+	}
 
 	// Track unique files to avoid double-counting when $PWD overlaps with other dirs
 	seenPaths := make(map[string]bool)
 
-	for _, dir := range dirs {
-		// Check context cancellation
+	// Collect results from all goroutines (with context timeout)
+	for i := 0; i < len(dirs); i++ {
 		select {
-		case <-ctx.Done():
-			return false
-		default:
-		}
-
-		// Skip directories that don't exist
-		if _, err := os.Stat(dir); os.IsNotExist(err) {
-			continue
-		}
-
-		result, err := patterns.ScanDirectory(ctx, dir, config)
-		if err != nil {
-			continue // Skip directories we can't read
-		}
-
-		for _, match := range result.Matches {
-			// Deduplicate paths (in case $PWD is ~/Downloads, etc.)
-			if seenPaths[match.Path] {
-				continue
+		case r := <-resultCh:
+			if r.err != nil {
+				continue // Skip directories we can't read
 			}
-			seenPaths[match.Path] = true
 
-			s.dirCounts[dir]++
-			s.totalCount++
-			s.foundPaths = append(s.foundPaths, match.Path)
+			for _, match := range r.result.Matches {
+				// Deduplicate paths (in case $PWD is ~/Downloads, etc.)
+				if seenPaths[match.Path] {
+					continue
+				}
+				seenPaths[match.Path] = true
+
+				s.dirCounts[r.dir]++
+				s.totalCount++
+				s.foundPaths = append(s.foundPaths, match.Path)
+			}
+		case <-scanCtx.Done():
+			// Time budget exhausted - return what we have so far
+			return s.totalCount > 0
 		}
 	}
 

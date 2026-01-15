@@ -56,4 +56,3 @@ Dashlights performs over 35 concurrent security checks, organized into six categ
 ## Data Sprawl
 
 37. 🗑️ **[Dumpster Fire](docs/signals/dumpster_fire.md)** - Detects sensitive files (dumps, logs, keys) in hot zones (Downloads, Desktop, $PWD, /tmp) [[code](src/signals/dumpster_fire.go)]
-38. 🦴 **[Rotting Secrets](docs/signals/rotting_secrets.md)** - Detects old (>7 days) sensitive files that may have been forgotten [[code](src/signals/rotting_secrets.go)]
